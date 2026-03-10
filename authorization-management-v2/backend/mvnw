@@ -1,0 +1,6 @@
+#!/bin/sh
+# Maven Wrapper script placeholder
+# In a real environment, download from:
+# https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper-distribution/
+echo "Maven Wrapper - Please install Maven to run tests"
+echo "Run: mvn test"
