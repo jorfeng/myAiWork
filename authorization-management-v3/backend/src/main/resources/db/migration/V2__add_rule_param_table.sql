@@ -1,6 +1,15 @@
 -- V2__add_rule_param_table.sql
 -- Add Rule Parameter table for rule field configuration
 
+-- Create update_updated_at_column function if not exists
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 -- Rule Parameter Table
 CREATE TABLE rule_param (
     id BIGSERIAL PRIMARY KEY,
@@ -28,6 +37,7 @@ CREATE INDEX idx_rule_param_name ON rule_param(name);
 CREATE INDEX idx_rule_param_name_en ON rule_param(name_en);
 
 -- Apply trigger for updated_at
+DROP TRIGGER IF EXISTS update_rule_param_updated_at ON rule_param;
 CREATE TRIGGER update_rule_param_updated_at
     BEFORE UPDATE ON rule_param
     FOR EACH ROW

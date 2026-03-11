@@ -5,10 +5,6 @@
 ALTER TABLE auth_letter ADD COLUMN IF NOT EXISTS updated_by VARCHAR(100);
 COMMENT ON COLUMN auth_letter.updated_by IS '更新人';
 
--- Add content_summary column if not exists
-ALTER TABLE auth_letter ADD COLUMN IF NOT EXISTS content_summary TEXT;
-COMMENT ON COLUMN auth_letter.content_summary IS '授权书内容摘要';
-
 -- Add scene additional fields
 ALTER TABLE scene ADD COLUMN IF NOT EXISTS industry VARCHAR(500);
 ALTER TABLE scene ADD COLUMN IF NOT EXISTS business_scenario VARCHAR(100);
