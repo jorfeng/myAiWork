@@ -343,17 +343,17 @@
               <div class="rule-config-body">
                 <!-- 条件列表 -->
                 <div class="condition-container">
-                  <template v-for="(condition, cIndex) in sceneForm.conditions" :key="cIndex">
+                  <template v-for="(condition, cIndex) in sceneForm.conditions">
                     <!-- 条件组 -->
-                    <div v-if="condition.type === 'group'" class="condition-group">
+                    <div v-if="condition.type === 'group'" :key="cIndex" class="condition-group">
                       <div class="group-connector-line"></div>
                       <div class="group-connector-btn" @click="condition.logic = condition.logic === 'AND' ? 'OR' : 'AND'">
                         {{ condition.logic === 'AND' ? '且' : '或' }}
                       </div>
                       <div class="group-content">
                         <div class="group-conditions">
-                          <template v-for="(cond, gIndex) in condition.conditions" :key="gIndex">
-                            <div class="condition-row with-line">
+                          <template v-for="(cond, gIndex) in condition.conditions">
+                            <div :key="gIndex" class="condition-row with-line">
                               <div class="condition-line" v-if="gIndex > 0"></div>
                               <div class="condition-connector" v-if="gIndex > 0" @click="toggleGroupConditionLogic(condition, gIndex)">
                                 {{ condition.conditionLogics && condition.conditionLogics[gIndex - 1] === 'OR' ? '或' : '且' }}
@@ -375,7 +375,7 @@
                       </div>
                     </div>
                     <!-- 普通条件 -->
-                    <div v-else class="condition-row with-line">
+                    <div v-else :key="cIndex" class="condition-row with-line">
                       <div class="condition-line" v-if="cIndex > 0"></div>
                       <div class="condition-connector" v-if="cIndex > 0" @click="toggleConditionLogic(cIndex)">
                         {{ sceneForm.conditionLogics && sceneForm.conditionLogics[cIndex - 1] === 'OR' ? '或' : '且' }}
