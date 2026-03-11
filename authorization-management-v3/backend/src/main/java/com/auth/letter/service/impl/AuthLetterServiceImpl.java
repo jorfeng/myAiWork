@@ -1,0 +1,205 @@
+package com.auth.letter.service.impl;
+
+import com.auth.letter.dto.AuthLetterListVO;
+import com.auth.letter.dto.AuthLetterQueryDTO;
+import com.auth.letter.dto.PageResult;
+import com.auth.letter.entity.AuthLetter;
+import com.auth.letter.repository.AuthLetterRepository;
+import com.auth.letter.service.AuthLetterService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Authorization Letter Service Implementation
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AuthLetterServiceImpl implements AuthLetterService {
+
+    private final AuthLetterRepository authLetterRepository;
+    private final ObjectMapper objectMapper;
+
+    @Override
+    public PageResult<AuthLetterListVO> queryList(AuthLetterQueryDTO queryDTO) {
+        // Build pageable with sorting
+        Pageable pageable = PageRequest.of(
+                queryDTO.getPageNum() - 1,
+                queryDTO.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        // Build specification for filtering
+        Specification<AuthLetter> spec = (root, query, cb) -> {
+            var predicates = cb.conjunction();
+
+            if (StringUtils.hasText(queryDTO.getName())) {
+                predicates = cb.and(predicates,
+                        cb.like(cb.lower(root.get("name")), "%" + queryDTO.getName().toLowerCase() + "%"));
+            }
+
+            if (queryDTO.getPublishYear() != null) {
+                predicates = cb.and(predicates,
+                        cb.equal(root.get("publishYear"), queryDTO.getPublishYear()));
+            }
+
+            if (StringUtils.hasText(queryDTO.getStatus())) {
+                predicates = cb.and(predicates,
+                        cb.equal(root.get("status"), queryDTO.getStatus()));
+            }
+
+            // TODO: Add JSON array contains queries for authTargetLevel, applicableRegion, authPublishLevel, authPublishOrg
+            // PostgreSQL supports jsonb @> operator for JSON contains
+
+            return predicates;
+        };
+
+        Page<AuthLetter> page = authLetterRepository.findAll(spec, pageable);
+
+        // Convert to VO
+        List<AuthLetterListVO> voList = page.getContent().stream()
+                .map(this::convertToVO)
+                .toList();
+
+        return PageResult.of(voList, page.getTotalElements(), queryDTO.getPageNum(), queryDTO.getPageSize());
+    }
+
+    @Override
+    @Transactional
+    public int batchPublish(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return authLetterRepository.batchPublish(ids);
+    }
+
+    @Override
+    @Transactional
+    public int batchExpire(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return authLetterRepository.batchExpire(ids);
+    }
+
+    @Override
+    @Transactional
+    public int batchDelete(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        return authLetterRepository.batchDelete(ids);
+    }
+
+    @Override
+    public List<LookupValue> getLookupValues(String code) {
+        // TODO: Implement lookup service integration
+        // For now, return mock data based on code
+        return switch (code) {
+            case "AUTH_TARGET_LEVEL", "AUTH_PUBLISH_LEVEL" -> List.of(
+                    new LookupValue("ORGANIZATION", "机关", null),
+                    new LookupValue("REGIONAL_DEPT", "地区部", null),
+                    new LookupValue("REPRESENTATIVE_OFFICE", "代表处", null),
+                    new LookupValue("OFFICE", "办事处", null)
+            );
+            case "APPLICABLE_REGION" -> List.of(
+                    new LookupValue("EAST", "华东", null),
+                    new LookupValue("NORTH", "华北", null),
+                    new LookupValue("SOUTH", "华南", null),
+                    new LookupValue("WEST", "西部", null),
+                    new LookupValue("CENTRAL", "华中", null)
+            );
+            default -> Collections.emptyList();
+        };
+    }
+
+    @Override
+    public Object getOrgTree() {
+        // TODO: Implement organization tree from lookup service
+        // For now, return mock tree structure
+        return List.of(
+                new OrgTreeNode("ORG001", "总部", null, List.of(
+                        new OrgTreeNode("ORG002", "华东区", "ORG001", List.of(
+                                new OrgTreeNode("ORG003", "上海办事处", "ORG002", Collections.emptyList()),
+                                new OrgTreeNode("ORG004", "杭州办事处", "ORG002", Collections.emptyList())
+                        )),
+                        new OrgTreeNode("ORG005", "华北区", "ORG001", List.of(
+                                new OrgTreeNode("ORG006", "北京办事处", "ORG005", Collections.emptyList()),
+                                new OrgTreeNode("ORG007", "天津办事处", "ORG005", Collections.emptyList())
+                        ))
+                ))
+        );
+    }
+
+    private AuthLetterListVO convertToVO(AuthLetter entity) {
+        AuthLetterListVO vo = new AuthLetterListVO();
+        vo.setId(entity.getId());
+        vo.setCode(entity.getCode());
+        vo.setName(entity.getName());
+        vo.setStatus(entity.getStatus().name());
+        vo.setStatusText(entity.getStatus().getDescription());
+        vo.setPublishYear(entity.getPublishYear());
+        vo.setCreatedBy(entity.getCreatedBy());
+        vo.setCreatedAt(entity.getCreatedAt());
+
+        // Parse JSON arrays
+        vo.setAuthTargetLevel(parseJsonArray(entity.getAuthTargetLevel()));
+        vo.setApplicableRegion(parseJsonArray(entity.getApplicableRegion()));
+        vo.setAuthPublishLevel(parseJsonArray(entity.getAuthPublishLevel()));
+        vo.setAuthPublishOrg(parseJsonArray(entity.getAuthPublishOrg()));
+
+        // TODO: Convert codes to display text using lookup service
+        vo.setAuthTargetLevelText(convertCodesToText(vo.getAuthTargetLevel(), "AUTH_TARGET_LEVEL"));
+        vo.setApplicableRegionText(convertCodesToText(vo.getApplicableRegion(), "APPLICABLE_REGION"));
+        vo.setAuthPublishLevelText(convertCodesToText(vo.getAuthPublishLevel(), "AUTH_PUBLISH_LEVEL"));
+        vo.setAuthPublishOrgText(convertCodesToText(vo.getAuthPublishOrg(), "AUTH_PUBLISH_ORG"));
+
+        return vo;
+    }
+
+    private List<String> parseJsonArray(String json) {
+        if (!StringUtils.hasText(json)) {
+            return Collections.emptyList();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            log.warn("Failed to parse JSON array: {}", json, e);
+            return Collections.emptyList();
+        }
+    }
+
+    private List<String> convertCodesToText(List<String> codes, String lookupCode) {
+        if (codes == null || codes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<LookupValue> lookupValues = getLookupValues(lookupCode);
+        return codes.stream()
+                .map(code -> lookupValues.stream()
+                        .filter(lv -> lv.code().equals(code))
+                        .map(LookupValue::name)
+                        .findFirst()
+                        .orElse(code))
+                .toList();
+    }
+
+    /**
+     * Organization Tree Node for mock data
+     */
+    record OrgTreeNode(String code, String name, String parentCode, List<OrgTreeNode> children) {}
+}
