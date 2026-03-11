@@ -37,20 +37,16 @@
         }
         .query-form {
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+            flex-direction: column;
+            gap: 12px;
         }
-        .form-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
         }
-        .form-item .label {
-            width: 100px;
-            text-align: right;
-            margin-right: 10px;
-            color: #606266;
-            font-size: 14px;
+        .form-row .el-form-item {
+            margin-bottom: 0;
         }
         .query-buttons {
             display: flex;
@@ -76,9 +72,6 @@
             justify-content: flex-end;
             margin-top: 16px;
             padding-top: 16px;
-        }
-        .el-table {
-            font-size: 14px;
         }
         .el-tag {
             min-width: 60px;
@@ -108,54 +101,52 @@
             <!-- 查询条件区 -->
             <div class="query-card">
                 <div class="query-form">
-                    <div class="form-item">
-                        <span class="label">授权书名称</span>
-                        <el-input v-model="queryParams.name" placeholder="请输入授权书名称" clearable style="width: 180px"></el-input>
+                    <div class="form-row">
+                        <el-form-item label="授权书名称">
+                            <el-input v-model="queryParams.name" placeholder="请输入授权书名称" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label="授权对象层级">
+                            <el-select v-model="queryParams.authTargetLevel" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" clearable>
+                                <el-option v-for="item in authTargetLevelOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="适用区域">
+                            <el-select v-model="queryParams.applicableRegion" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" clearable>
+                                <el-option v-for="item in applicableRegionOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
+                            </el-select>
+                        </el-form-item>
                     </div>
-                    <div class="form-item">
-                        <span class="label">授权对象层级</span>
-                        <el-select v-model="queryParams.authTargetLevel" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" clearable style="width: 180px">
-                            <el-option v-for="item in authTargetLevelOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
-                        </el-select>
+                    <div class="form-row">
+                        <el-form-item label="授权发布层级">
+                            <el-select v-model="queryParams.authPublishLevel" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" clearable>
+                                <el-option v-for="item in authPublishLevelOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="授权发布组织">
+                            <el-tree-select
+                                v-model="queryParams.authPublishOrg"
+                                multiple
+                                collapse-tags
+                                collapse-tags-tooltip
+                                placeholder="请选择"
+                                clearable
+                                check-strictly
+                                :data="orgTreeData"
+                                :props="{ label: 'name', value: 'code', children: 'children' }"
+                            ></el-tree-select>
+                        </el-form-item>
+                        <el-form-item label="授权书发布年份">
+                            <el-date-picker v-model="queryParams.publishYear" type="year" placeholder="请选择年份" value-format="YYYY"></el-date-picker>
+                        </el-form-item>
                     </div>
-                    <div class="form-item">
-                        <span class="label">适用区域</span>
-                        <el-select v-model="queryParams.applicableRegion" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" clearable style="width: 180px">
-                            <el-option v-for="item in applicableRegionOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
-                        </el-select>
-                    </div>
-                    <div class="form-item">
-                        <span class="label">授权发布层级</span>
-                        <el-select v-model="queryParams.authPublishLevel" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" clearable style="width: 180px">
-                            <el-option v-for="item in authPublishLevelOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
-                        </el-select>
-                    </div>
-                    <div class="form-item">
-                        <span class="label">授权发布组织</span>
-                        <el-tree-select
-                            v-model="queryParams.authPublishOrg"
-                            multiple
-                            collapse-tags
-                            collapse-tags-tooltip
-                            placeholder="请选择"
-                            clearable
-                            check-strictly
-                            :data="orgTreeData"
-                            :props="{ label: 'name', value: 'code', children: 'children' }"
-                            style="width: 200px"
-                        ></el-tree-select>
-                    </div>
-                    <div class="form-item">
-                        <span class="label">授权书发布年份</span>
-                        <el-date-picker v-model="queryParams.publishYear" type="year" placeholder="请选择年份" value-format="YYYY" style="width: 150px"></el-date-picker>
-                    </div>
-                    <div class="form-item">
-                        <span class="label">状态</span>
-                        <el-select v-model="queryParams.status" placeholder="请选择" clearable style="width: 120px">
-                            <el-option label="草稿" value="DRAFT"></el-option>
-                            <el-option label="已发布" value="PUBLISHED"></el-option>
-                            <el-option label="已失效" value="EXPIRED"></el-option>
-                        </el-select>
+                    <div class="form-row">
+                        <el-form-item label="状态">
+                            <el-select v-model="queryParams.status" placeholder="请选择" clearable>
+                                <el-option label="草稿" value="DRAFT"></el-option>
+                                <el-option label="已发布" value="PUBLISHED"></el-option>
+                                <el-option label="已失效" value="EXPIRED"></el-option>
+                            </el-select>
+                        </el-form-item>
                     </div>
                 </div>
                 <div class="query-buttons">
@@ -280,16 +271,10 @@
 
         const app = createApp({
             setup() {
-                // 表格引用
                 const tableRef = ref(null)
-
-                // 加载状态
                 const loading = ref(false)
-
-                // 选中的行
                 const selectedRows = ref([])
 
-                // 查询参数
                 const queryParams = reactive({
                     name: '',
                     authTargetLevel: [],
@@ -300,14 +285,12 @@
                     status: ''
                 })
 
-                // 分页参数
                 const pagination = reactive({
                     pageNum: 1,
                     pageSize: 10,
                     total: 30
                 })
 
-                // 模拟表格数据
                 const tableData = ref([
                     {
                         id: 1,
@@ -376,7 +359,6 @@
                     }
                 ])
 
-                // 下拉选项数据
                 const authTargetLevelOptions = ref([
                     { code: 'ORGANIZATION', name: '机关' },
                     { code: 'REGIONAL_DEPT', name: '地区部' },
@@ -424,13 +406,11 @@
                     }
                 ])
 
-                // 查询
                 function handleQuery() {
                     pagination.pageNum = 1
                     ElementPlus.ElMessage.success('查询成功')
                 }
 
-                // 重置
                 function handleReset() {
                     queryParams.name = ''
                     queryParams.authTargetLevel = []
@@ -443,22 +423,18 @@
                     ElementPlus.ElMessage.info('已重置查询条件')
                 }
 
-                // 表格选择变化
                 function handleSelectionChange(selection) {
                     selectedRows.value = selection
                 }
 
-                // 分页大小变化
                 function handleSizeChange(size) {
                     pagination.pageSize = size
                 }
 
-                // 页码变化
                 function handleCurrentChange(page) {
                     pagination.pageNum = page
                 }
 
-                // 检查是否选中数据
                 function checkSelection() {
                     if (selectedRows.value.length === 0) {
                         ElementPlus.ElMessage.warning('请先选择数据')
@@ -467,18 +443,15 @@
                     return true
                 }
 
-                // 新建授权书
                 function handleCreate() {
                     ElementPlus.ElMessage.info('新建授权书功能待实现')
                 }
 
-                // 更新
                 function handleUpdate() {
                     if (!checkSelection()) return
                     ElementPlus.ElMessage.info('更新功能待实现')
                 }
 
-                // 生效
                 function handleActivate() {
                     if (!checkSelection()) return
                     ElementPlus.ElMessageBox.confirm(
@@ -490,7 +463,6 @@
                     }).catch(() => {})
                 }
 
-                // 失效
                 function handleDeactivate() {
                     if (!checkSelection()) return
                     ElementPlus.ElMessageBox.confirm(
@@ -502,7 +474,6 @@
                     }).catch(() => {})
                 }
 
-                // 删除
                 function handleDelete() {
                     if (!checkSelection()) return
                     ElementPlus.ElMessageBox.confirm(
@@ -514,12 +485,10 @@
                     }).catch(() => {})
                 }
 
-                // 跳转到详情页
                 function goToDetail(id) {
                     ElementPlus.ElMessage.info(`跳转到详情页: ID=${id}`)
                 }
 
-                // 获取状态标签类型
                 function getStatusTagType(status) {
                     const types = {
                         DRAFT: 'info',
@@ -529,13 +498,11 @@
                     return types[status] || 'info'
                 }
 
-                // 格式化数组文本
                 function formatArrayText(arr) {
                     if (!arr || arr.length === 0) return '-'
                     return arr.join('、')
                 }
 
-                // 格式化日期时间
                 function formatDateTime(dateTime) {
                     if (!dateTime) return '-'
                     return dateTime
@@ -570,7 +537,6 @@
             }
         })
 
-        // 注册所有图标
         for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
             app.component(key, component)
         }

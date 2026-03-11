@@ -2,104 +2,103 @@
   <div class="auth-letter-list-page">
     <!-- 查询条件区 -->
     <el-card class="query-card" shadow="never">
-      <el-form :model="queryParams" inline class="query-form">
-        <el-form-item label="授权书名称">
-          <el-input
-            v-model="queryParams.name"
-            placeholder="请输入授权书名称"
-            clearable
-            style="width: 180px"
-          />
-        </el-form-item>
-        <el-form-item label="授权对象层级">
-          <el-select
-            v-model="queryParams.authTargetLevel"
-            multiple
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="请选择"
-            clearable
-            style="width: 180px"
-          >
-            <el-option
-              v-for="item in authTargetLevelOptions"
-              :key="item.code"
-              :label="item.name"
-              :value="item.code"
+      <el-form :model="queryParams" class="query-form">
+        <div class="form-row">
+          <el-form-item label="授权书名称">
+            <el-input
+              v-model="queryParams.name"
+              placeholder="请输入授权书名称"
+              clearable
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="适用区域">
-          <el-select
-            v-model="queryParams.applicableRegion"
-            multiple
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="请选择"
-            clearable
-            style="width: 180px"
-          >
-            <el-option
-              v-for="item in applicableRegionOptions"
-              :key="item.code"
-              :label="item.name"
-              :value="item.code"
+          </el-form-item>
+          <el-form-item label="授权对象层级">
+            <el-select
+              v-model="queryParams.authTargetLevel"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="请选择"
+              clearable
+            >
+              <el-option
+                v-for="item in authTargetLevelOptions"
+                :key="item.code"
+                :label="item.name"
+                :value="item.code"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="适用区域">
+            <el-select
+              v-model="queryParams.applicableRegion"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="请选择"
+              clearable
+            >
+              <el-option
+                v-for="item in applicableRegionOptions"
+                :key="item.code"
+                :label="item.name"
+                :value="item.code"
+              />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="form-row">
+          <el-form-item label="授权发布层级">
+            <el-select
+              v-model="queryParams.authPublishLevel"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="请选择"
+              clearable
+            >
+              <el-option
+                v-for="item in authPublishLevelOptions"
+                :key="item.code"
+                :label="item.name"
+                :value="item.code"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="授权发布组织">
+            <el-tree-select
+              v-model="queryParams.authPublishOrg"
+              multiple
+              collapse-tags
+              collapse-tags-tooltip
+              placeholder="请选择"
+              clearable
+              check-strictly
+              :data="orgTreeData"
+              :props="{ label: 'name', value: 'code', children: 'children' }"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="授权发布层级">
-          <el-select
-            v-model="queryParams.authPublishLevel"
-            multiple
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="请选择"
-            clearable
-            style="width: 180px"
-          >
-            <el-option
-              v-for="item in authPublishLevelOptions"
-              :key="item.code"
-              :label="item.name"
-              :value="item.code"
+          </el-form-item>
+          <el-form-item label="授权书发布年份">
+            <el-date-picker
+              v-model="queryParams.publishYear"
+              type="year"
+              placeholder="请选择年份"
+              value-format="YYYY"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="授权发布组织">
-          <el-tree-select
-            v-model="queryParams.authPublishOrg"
-            multiple
-            collapse-tags
-            collapse-tags-tooltip
-            placeholder="请选择"
-            clearable
-            check-strictly
-            :data="orgTreeData"
-            :props="{ label: 'name', value: 'code', children: 'children' }"
-            style="width: 200px"
-          />
-        </el-form-item>
-        <el-form-item label="授权书发布年份">
-          <el-date-picker
-            v-model="queryParams.publishYear"
-            type="year"
-            placeholder="请选择年份"
-            value-format="YYYY"
-            style="width: 150px"
-          />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select
-            v-model="queryParams.status"
-            placeholder="请选择"
-            clearable
-            style="width: 120px"
-          >
-            <el-option label="草稿" value="DRAFT" />
-            <el-option label="已发布" value="PUBLISHED" />
-            <el-option label="已失效" value="EXPIRED" />
-          </el-select>
-        </el-form-item>
+          </el-form-item>
+        </div>
+        <div class="form-row">
+          <el-form-item label="状态">
+            <el-select
+              v-model="queryParams.status"
+              placeholder="请选择"
+              clearable
+            >
+              <el-option label="草稿" value="DRAFT" />
+              <el-option label="已发布" value="PUBLISHED" />
+              <el-option label="已失效" value="EXPIRED" />
+            </el-select>
+          </el-form-item>
+        </div>
       </el-form>
       <div class="query-buttons">
         <el-button type="primary" @click="handleQuery">
@@ -237,8 +236,50 @@ import {
   Close,
   Delete
 } from '@element-plus/icons-vue'
-import { authLetterApi, lookupApi } from '../api/authLetter'
+import axios from 'axios'
 
+// ========== API配置 ==========
+const apiClient = axios.create({
+  baseURL: '/api',
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' }
+})
+
+// 响应拦截器
+apiClient.interceptors.response.use(
+  response => response.data,
+  error => {
+    console.error('API Error:', error)
+    return Promise.reject(error)
+  }
+)
+
+// API方法
+const authLetterApi = {
+  queryList(params) {
+    return apiClient.get('/auth-letters', { params })
+  },
+  batchPublish(ids) {
+    return apiClient.put('/auth-letters/batch/publish', { ids })
+  },
+  batchExpire(ids) {
+    return apiClient.put('/auth-letters/batch/expire', { ids })
+  },
+  batchDelete(ids) {
+    return apiClient.delete('/auth-letters/batch', { data: { ids } })
+  }
+}
+
+const lookupApi = {
+  getValues(code) {
+    return apiClient.get(`/lookup/${code}`)
+  },
+  getOrgTree() {
+    return apiClient.get('/lookup/org/tree')
+  }
+}
+
+// ========== 页面逻辑 ==========
 const router = useRouter()
 
 // 表格引用
@@ -283,19 +324,15 @@ const orgTreeData = ref([])
  */
 async function loadLookupData() {
   try {
-    // 加载授权对象层级
     const targetRes = await lookupApi.getValues('AUTH_TARGET_LEVEL')
     authTargetLevelOptions.value = targetRes.data || []
 
-    // 加载适用区域
     const regionRes = await lookupApi.getValues('APPLICABLE_REGION')
     applicableRegionOptions.value = regionRes.data || []
 
-    // 加载授权发布层级
     const publishLevelRes = await lookupApi.getValues('AUTH_PUBLISH_LEVEL')
     authPublishLevelOptions.value = publishLevelRes.data || []
 
-    // 加载组织树
     const orgRes = await lookupApi.getOrgTree()
     orgTreeData.value = orgRes.data || []
   } catch (error) {
@@ -591,20 +628,46 @@ onMounted(() => {
 
 .query-form {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
 }
 
 .query-form :deep(.el-form-item) {
-  margin-bottom: 10px;
-  margin-right: 10px;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.query-form :deep(.el-form-item__label) {
+  width: auto;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.query-form :deep(.el-form-item__content) {
+  flex: 1;
+}
+
+.query-form :deep(.el-input),
+.query-form :deep(.el-select),
+.query-form :deep(.el-date-picker),
+.query-form :deep(.el-tree-select) {
+  width: 100%;
 }
 
 .query-buttons {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
 }
 
 .action-buttons {
@@ -623,7 +686,6 @@ onMounted(() => {
   margin-top: 16px;
 }
 
-/* 状态标签样式 */
 .el-tag {
   min-width: 60px;
   text-align: center;

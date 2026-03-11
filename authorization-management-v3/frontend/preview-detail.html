@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>授权书详情页 - 预览</title>
+    <!-- Element Plus CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Element Plus -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+            min-height: 100vh;
+        }
+        .auth-letter-detail-page {
+            padding: 20px;
+            padding-bottom: 80px;
+            background-color: #f5f7fa;
+            min-height: 100vh;
+        }
+        .info-card, .attachment-card, .rule-card {
+            background: #fff;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        }
+        .el-card__header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #ebeef5;
+        }
+        .el-card__body {
+            padding: 20px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .info-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .form-row.single {
+            grid-template-columns: 1fr;
+        }
+        .section-header {
+            display: flex;
+        }
+        .section-label {
+            width: 80px;
+            font-weight: 600;
+            color: #606266;
+            padding-top: 8px;
+            flex-shrink: 0;
+        }
+        .section-content {
+            flex: 1;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .pagination-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+        .bottom-actions {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            box-shadow: 0 -2px 12px 0 rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        .el-form-item__label::before {
+            content: '*';
+            color: #f56c6c;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="auth-letter-detail-page">
+            <!-- 基本信息区 -->
+            <div class="info-card">
+                <div class="el-card__header">
+                    <span class="card-title">基本信息</span>
+                </div>
+                <div class="el-card__body">
+                    <div class="info-form">
+                        <div class="form-row">
+                            <el-form-item label="授权书名称" required>
+                                <el-input v-model="formData.name" placeholder="请输入授权书名称" maxlength="100" show-word-limit></el-input>
+                            </el-form-item>
+                            <el-form-item label="授权发布层级" required>
+                                <el-select v-model="formData.authPublishLevel" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" style="width: 100%">
+                                    <el-option v-for="item in authPublishLevelOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="授权发布组织" required>
+                                <el-tree-select
+                                    v-model="formData.authPublishOrg"
+                                    multiple
+                                    collapse-tags
+                                    collapse-tags-tooltip
+                                    placeholder="请选择"
+                                    check-strictly
+                                    :data="orgTreeData"
+                                    :props="{ label: 'name', value: 'code', children: 'children' }"
+                                    style="width: 100%"
+                                ></el-tree-select>
+                            </el-form-item>
+                        </div>
+                        <div class="form-row">
+                            <el-form-item label="授权对象层级" required>
+                                <el-select v-model="formData.authTargetLevel" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" style="width: 100%">
+                                    <el-option v-for="item in authTargetLevelOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="适用区域" required>
+                                <el-select v-model="formData.applicableRegion" multiple collapse-tags collapse-tags-tooltip placeholder="请选择" style="width: 100%">
+                                    <el-option v-for="item in applicableRegionOptions" :key="item.code" :label="item.name" :value="item.code"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="授权书发布年份" required>
+                                <el-date-picker v-model="formData.publishYear" type="year" placeholder="请选择年份" value-format="YYYY" style="width: 100%"></el-date-picker>
+                            </el-form-item>
+                        </div>
+                        <div class="form-row single">
+                            <el-form-item label="授权书内容摘要" required>
+                                <el-input
+                                    v-model="formData.contentSummary"
+                                    type="textarea"
+                                    :rows="4"
+                                    placeholder="请输入授权书内容摘要"
+                                    maxlength="4000"
+                                    show-word-limit
+                                ></el-input>
+                            </el-form-item>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 附件区块 -->
+            <div class="attachment-card">
+                <div class="el-card__body">
+                    <div class="section-header">
+                        <span class="section-label">附件</span>
+                        <div class="section-content">
+                            <div class="action-buttons">
+                                <el-button type="primary" @click="handleUpload">
+                                    <el-icon><upload /></el-icon>
+                                    上传
+                                </el-button>
+                                <el-button @click="handleDownloadAttachment">
+                                    <el-icon><download /></el-icon>
+                                    下载
+                                </el-button>
+                                <el-button type="danger" @click="handleDeleteAttachment">
+                                    <el-icon><delete /></el-icon>
+                                    删除
+                                </el-button>
+                            </div>
+                            <el-table
+                                ref="attachmentTableRef"
+                                :data="attachmentData"
+                                @selection-change="handleAttachmentSelectionChange"
+                                stripe
+                                border
+                                style="width: 100%"
+                            >
+                                <el-table-column type="selection" width="50" align="center"></el-table-column>
+                                <el-table-column type="index" label="序号" width="60" align="center">
+                                    <template #default="scope">
+                                        {{ (attachmentPagination.pageNum - 1) * attachmentPagination.pageSize + scope.$index + 1 }}
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="150" align="center">
+                                    <template #default="scope">
+                                        <el-button link type="primary" @click="handleDeleteRow(scope.row, 'attachment')">删除</el-button>
+                                        <el-button link type="primary" @click="handleDownloadRow(scope.row)">下载</el-button>
+                                        <el-button link type="warning" @click="handleEncryptRow(scope.row)">加密</el-button>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="fileName" label="文档名称" min-width="180">
+                                    <template #default="scope">
+                                        <el-link type="primary" @click="handleDownloadRow(scope.row)">{{ scope.row.fileName }}</el-link>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="docTypeName" label="文档类型" width="120"></el-table-column>
+                                <el-table-column prop="createdBy" label="创建人" width="100" align="center"></el-table-column>
+                                <el-table-column prop="createdAt" label="创建时间" width="160" align="center"></el-table-column>
+                                <el-table-column prop="updatedBy" label="更新人" width="100" align="center"></el-table-column>
+                                <el-table-column prop="updatedAt" label="更新时间" width="160" align="center"></el-table-column>
+                            </el-table>
+                            <div class="pagination-container">
+                                <el-pagination
+                                    v-model:current-page="attachmentPagination.pageNum"
+                                    v-model:page-size="attachmentPagination.pageSize"
+                                    :page-sizes="[10, 20, 50]"
+                                    :total="attachmentPagination.total"
+                                    layout="total, sizes, prev, pager, next"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 授权规则区块 -->
+            <div class="rule-card">
+                <div class="el-card__body">
+                    <div class="section-header">
+                        <span class="section-label">授权规则</span>
+                        <div class="section-content">
+                            <div class="action-buttons">
+                                <el-button type="primary" @click="handleAddScene">
+                                    <el-icon><plus /></el-icon>
+                                    添加场景
+                                </el-button>
+                                <el-button type="danger" @click="handleDeleteScene">
+                                    <el-icon><delete /></el-icon>
+                                    删除
+                                </el-button>
+                            </div>
+                            <el-table
+                                ref="sceneTableRef"
+                                :data="sceneData"
+                                @selection-change="handleSceneSelectionChange"
+                                stripe
+                                border
+                                style="width: 100%"
+                            >
+                                <el-table-column type="selection" width="50" align="center"></el-table-column>
+                                <el-table-column type="index" label="序号" width="60" align="center">
+                                    <template #default="scope">
+                                        {{ (scenePagination.pageNum - 1) * scenePagination.pageSize + scope.$index + 1 }}
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="100" align="center">
+                                    <template #default="scope">
+                                        <el-button link type="primary" @click="handleEditScene(scope.row)">编辑</el-button>
+                                        <el-button link type="danger" @click="handleDeleteRow(scope.row, 'scene')">删除</el-button>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column prop="sceneName" label="场景" min-width="120"></el-table-column>
+                                <el-table-column prop="industry" label="产业" min-width="100"></el-table-column>
+                                <el-table-column prop="businessScenario" label="业务场景" min-width="120"></el-table-column>
+                                <el-table-column prop="ruleDetail" label="具体规则" min-width="150" show-overflow-tooltip></el-table-column>
+                                <el-table-column prop="decisionLevel" label="决策层级" width="100"></el-table-column>
+                                <el-table-column prop="createdBy" label="创建人" width="100" align="center"></el-table-column>
+                                <el-table-column prop="createdAt" label="创建时间" width="160" align="center"></el-table-column>
+                                <el-table-column prop="updatedBy" label="更新人" width="100" align="center"></el-table-column>
+                                <el-table-column prop="updatedAt" label="更新时间" width="160" align="center"></el-table-column>
+                            </el-table>
+                            <div class="pagination-container">
+                                <el-pagination
+                                    v-model:current-page="scenePagination.pageNum"
+                                    v-model:page-size="scenePagination.pageSize"
+                                    :page-sizes="[10, 20, 50]"
+                                    :total="scenePagination.total"
+                                    layout="total, sizes, prev, pager, next"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部悬浮按钮 -->
+            <div class="bottom-actions">
+                <el-button @click="handleSave" :disabled="!canSave">
+                    <el-icon><document-checked /></el-icon>
+                    保存
+                </el-button>
+                <el-button type="primary" @click="handleSaveAndPublish" :disabled="!canSaveAndPublish">
+                    <el-icon><promotion /></el-icon>
+                    保存并发布
+                </el-button>
+                <el-button type="success" @click="handlePublish" :disabled="!canPublish">
+                    <el-icon><promotion /></el-icon>
+                    发布
+                </el-button>
+                <el-button @click="handleCancel">
+                    <el-icon><close /></el-icon>
+                    取消
+                </el-button>
+                <el-button type="danger" @click="handleDeleteAuthLetter" :disabled="!canDelete">
+                    <el-icon><delete /></el-icon>
+                    删除
+                </el-button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted } = Vue
+
+        const app = createApp({
+            setup() {
+                const pageStatus = ref('DRAFT')
+
+                const formData = reactive({
+                    name: '',
+                    authPublishLevel: [],
+                    authPublishOrg: [],
+                    authTargetLevel: [],
+                    applicableRegion: [],
+                    publishYear: null,
+                    contentSummary: ''
+                })
+
+                const authPublishLevelOptions = ref([
+                    { code: 'ORGANIZATION', name: '机关' },
+                    { code: 'REGIONAL_DEPT', name: '地区部' },
+                    { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+                    { code: 'OFFICE', name: '办事处' }
+                ])
+
+                const authTargetLevelOptions = ref([...authPublishLevelOptions.value])
+                const applicableRegionOptions = ref([
+                    { code: 'EAST', name: '华东' },
+                    { code: 'NORTH', name: '华北' },
+                    { code: 'SOUTH', name: '华南' },
+                    { code: 'WEST', name: '西部' },
+                    { code: 'CENTRAL', name: '华中' }
+                ])
+
+                const orgTreeData = ref([
+                    {
+                        code: 'ORG001',
+                        name: '总部',
+                        children: [
+                            { code: 'ORG002', name: '华东区', children: [{ code: 'ORG003', name: '上海办事处' }] },
+                            { code: 'ORG005', name: '华北区', children: [{ code: 'ORG006', name: '北京办事处' }] }
+                        ]
+                    }
+                ])
+
+                // 附件相关
+                const selectedAttachments = ref([])
+                const attachmentData = ref([
+                    { id: 1, fileName: '授权书原件.pdf', docTypeName: '原件', createdBy: 'admin', createdAt: '2024-03-10 10:30:00', updatedBy: 'admin', updatedAt: '2024-03-10 10:30:00' },
+                    { id: 2, fileName: '授权书附件.docx', docTypeName: '附件', createdBy: 'admin', createdAt: '2024-03-10 11:00:00', updatedBy: '-', updatedAt: '-' }
+                ])
+                const attachmentPagination = reactive({ pageNum: 1, pageSize: 10, total: 2 })
+
+                // 授权规则相关
+                const selectedScenes = ref([])
+                const sceneData = ref([
+                    { id: 1, sceneName: '销售场景', industry: 'ICT', businessScenario: '设备销售', ruleDetail: '单笔金额不超过500万的销售订单可自主决策', decisionLevel: '地区部', createdBy: 'admin', createdAt: '2024-03-10 10:30:00', updatedBy: '-', updatedAt: '-' },
+                    { id: 2, sceneName: '采购场景', industry: '消费者', businessScenario: '物料采购', ruleDetail: '单笔金额不超过200万的采购订单可自主决策', decisionLevel: '代表处', createdBy: 'admin', createdAt: '2024-03-10 11:00:00', updatedBy: 'admin', updatedAt: '2024-03-10 14:00:00' }
+                ])
+                const scenePagination = reactive({ pageNum: 1, pageSize: 10, total: 2 })
+
+                // 按钮状态
+                const canSave = computed(() => pageStatus.value === 'DRAFT')
+                const canPublish = computed(() => pageStatus.value === 'DRAFT')
+                const canSaveAndPublish = computed(() => pageStatus.value === 'DRAFT')
+                const canDelete = computed(() => pageStatus.value === 'DRAFT')
+
+                // 方法
+                function handleUpload() {
+                    ElementPlus.ElMessage.info('上传功能待实现')
+                }
+
+                function handleDownloadAttachment() {
+                    if (selectedAttachments.value.length === 0) {
+                        ElementPlus.ElMessage.warning('请先选择要下载的附件')
+                        return
+                    }
+                    ElementPlus.ElMessage.info('批量下载功能待实现')
+                }
+
+                function handleDeleteAttachment() {
+                    if (selectedAttachments.value.length === 0) {
+                        ElementPlus.ElMessage.warning('请先选择要删除的附件')
+                        return
+                    }
+                    ElementPlus.ElMessageBox.confirm(`确定要删除选中的 ${selectedAttachments.value.length} 个附件吗？`, '提示', { type: 'warning' })
+                        .then(() => ElementPlus.ElMessage.success('删除成功'))
+                        .catch(() => {})
+                }
+
+                function handleDeleteRow(row, type) {
+                    ElementPlus.ElMessageBox.confirm('确定要删除吗？', '提示', { type: 'warning' })
+                        .then(() => ElementPlus.ElMessage.success('删除成功'))
+                        .catch(() => {})
+                }
+
+                function handleDownloadRow(row) {
+                    ElementPlus.ElMessage.info(`下载文件: ${row.fileName}`)
+                }
+
+                function handleEncryptRow(row) {
+                    ElementPlus.ElMessage.info(`加密文件: ${row.fileName}`)
+                }
+
+                function handleAttachmentSelectionChange(selection) {
+                    selectedAttachments.value = selection
+                }
+
+                function handleAddScene() {
+                    ElementPlus.ElMessage.info('添加场景功能待实现')
+                }
+
+                function handleDeleteScene() {
+                    if (selectedScenes.value.length === 0) {
+                        ElementPlus.ElMessage.warning('请先选择要删除的场景')
+                        return
+                    }
+                    ElementPlus.ElMessageBox.confirm(`确定要删除选中的 ${selectedScenes.value.length} 个场景吗？`, '提示', { type: 'warning' })
+                        .then(() => ElementPlus.ElMessage.success('删除成功'))
+                        .catch(() => {})
+                }
+
+                function handleEditScene(row) {
+                    ElementPlus.ElMessage.info(`编辑场景: ${row.sceneName}`)
+                }
+
+                function handleSceneSelectionChange(selection) {
+                    selectedScenes.value = selection
+                }
+
+                function handleSave() {
+                    ElementPlus.ElMessage.success('保存成功')
+                }
+
+                function handleSaveAndPublish() {
+                    ElementPlus.ElMessage.success('保存并发布成功')
+                    pageStatus.value = 'PUBLISHED'
+                }
+
+                function handlePublish() {
+                    ElementPlus.ElMessageBox.confirm('确定要发布该授权书吗？', '提示', { type: 'warning' })
+                        .then(() => {
+                            ElementPlus.ElMessage.success('发布成功')
+                            pageStatus.value = 'PUBLISHED'
+                        })
+                        .catch(() => {})
+                }
+
+                function handleCancel() {
+                    ElementPlus.ElMessage.info('返回列表页')
+                }
+
+                function handleDeleteAuthLetter() {
+                    ElementPlus.ElMessageBox.confirm('确定要删除该授权书吗？', '提示', { type: 'warning' })
+                        .then(() => ElementPlus.ElMessage.success('删除成功'))
+                        .catch(() => {})
+                }
+
+                return {
+                    formData,
+                    authPublishLevelOptions,
+                    authTargetLevelOptions,
+                    applicableRegionOptions,
+                    orgTreeData,
+                    selectedAttachments,
+                    attachmentData,
+                    attachmentPagination,
+                    selectedScenes,
+                    sceneData,
+                    scenePagination,
+                    canSave,
+                    canPublish,
+                    canSaveAndPublish,
+                    canDelete,
+                    handleUpload,
+                    handleDownloadAttachment,
+                    handleDeleteAttachment,
+                    handleDeleteRow,
+                    handleDownloadRow,
+                    handleEncryptRow,
+                    handleAttachmentSelectionChange,
+                    handleAddScene,
+                    handleDeleteScene,
+                    handleEditScene,
+                    handleSceneSelectionChange,
+                    handleSave,
+                    handleSaveAndPublish,
+                    handlePublish,
+                    handleCancel,
+                    handleDeleteAuthLetter
+                }
+            }
+        })
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component)
+        }
+
+        app.use(ElementPlus)
+        app.mount('#app')
+    </script>
+</body>
+</html>
