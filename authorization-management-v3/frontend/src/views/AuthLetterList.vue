@@ -1,297 +1,319 @@
 <template>
   <div class="auth-letter-list-page">
     <!-- 查询条件区 -->
-    <el-card class="query-card" shadow="never">
-      <el-form :model="queryParams" class="query-form">
+    <div class="query-card">
+      <div class="query-form">
         <div class="form-row">
-          <el-form-item label="授权书名称">
-            <el-input
-              v-model="queryParams.name"
-              placeholder="请输入授权书名称"
-              clearable
-            />
-          </el-form-item>
-          <el-form-item label="授权对象层级">
-            <el-select
-              v-model="queryParams.authTargetLevel"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择"
-              clearable
-            >
-              <el-option
-                v-for="item in authTargetLevelOptions"
-                :key="item.code"
-                :label="item.name"
-                :value="item.code"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="适用区域">
-            <el-select
-              v-model="queryParams.applicableRegion"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择"
-              clearable
-            >
-              <el-option
-                v-for="item in applicableRegionOptions"
-                :key="item.code"
-                :label="item.name"
-                :value="item.code"
-              />
-            </el-select>
-          </el-form-item>
+          <div class="form-item">
+            <label class="form-label">授权书名称</label>
+            <input type="text" v-model="queryParams.name" class="form-input" placeholder="请输入授权书名称" />
+          </div>
+          <div class="form-item">
+            <label class="form-label">授权对象层级</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleSelect('authTargetLevel')">
+                <span class="selected-tags" v-if="queryParams.authTargetLevel.length > 0">
+                  <span class="tag" v-for="(item, index) in getSelectedLabels(queryParams.authTargetLevel, authTargetLevelOptions)" :key="index">
+                    {{ item }}
+                    <span class="tag-close" @click.stop="removeSelected('authTargetLevel', queryParams.authTargetLevel[index])">×</span>
+                  </span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" v-show="activeDropdown === 'authTargetLevel'">
+                <div class="select-option" v-for="item in authTargetLevelOptions" :key="item.code" @click="toggleMultiSelect('authTargetLevel', item.code)">
+                  <span class="checkbox" :class="{ checked: queryParams.authTargetLevel.includes(item.code) }"></span>
+                  <span>{{ item.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-item">
+            <label class="form-label">适用区域</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleSelect('applicableRegion')">
+                <span class="selected-tags" v-if="queryParams.applicableRegion.length > 0">
+                  <span class="tag" v-for="(item, index) in getSelectedLabels(queryParams.applicableRegion, applicableRegionOptions)" :key="index">
+                    {{ item }}
+                    <span class="tag-close" @click.stop="removeSelected('applicableRegion', queryParams.applicableRegion[index])">×</span>
+                  </span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" v-show="activeDropdown === 'applicableRegion'">
+                <div class="select-option" v-for="item in applicableRegionOptions" :key="item.code" @click="toggleMultiSelect('applicableRegion', item.code)">
+                  <span class="checkbox" :class="{ checked: queryParams.applicableRegion.includes(item.code) }"></span>
+                  <span>{{ item.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="form-row">
-          <el-form-item label="授权发布层级">
-            <el-select
-              v-model="queryParams.authPublishLevel"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择"
-              clearable
-            >
-              <el-option
-                v-for="item in authPublishLevelOptions"
-                :key="item.code"
-                :label="item.name"
-                :value="item.code"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="授权发布组织">
-            <el-tree-select
-              v-model="queryParams.authPublishOrg"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择"
-              clearable
-              check-strictly
-              :data="orgTreeData"
-              :props="{ label: 'name', value: 'code', children: 'children' }"
-            />
-          </el-form-item>
-          <el-form-item label="授权书发布年份">
-            <el-date-picker
-              v-model="queryParams.publishYear"
-              type="year"
-              placeholder="请选择年份"
-              value-format="YYYY"
-            />
-          </el-form-item>
+          <div class="form-item">
+            <label class="form-label">授权发布层级</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleSelect('authPublishLevel')">
+                <span class="selected-tags" v-if="queryParams.authPublishLevel.length > 0">
+                  <span class="tag" v-for="(item, index) in getSelectedLabels(queryParams.authPublishLevel, authPublishLevelOptions)" :key="index">
+                    {{ item }}
+                    <span class="tag-close" @click.stop="removeSelected('authPublishLevel', queryParams.authPublishLevel[index])">×</span>
+                  </span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="multi-select-dropdown" v-show="activeDropdown === 'authPublishLevel'">
+                <div class="select-option" v-for="item in authPublishLevelOptions" :key="item.code" @click="toggleMultiSelect('authPublishLevel', item.code)">
+                  <span class="checkbox" :class="{ checked: queryParams.authPublishLevel.includes(item.code) }"></span>
+                  <span>{{ item.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-item">
+            <label class="form-label">授权发布组织</label>
+            <div class="tree-select-wrapper">
+              <div class="tree-select-trigger" @click="toggleSelect('authPublishOrg')">
+                <span class="selected-tags" v-if="queryParams.authPublishOrg.length > 0">
+                  <span class="tag" v-for="(item, index) in queryParams.authPublishOrg.slice(0, 2)" :key="index">
+                    {{ getOrgName(item) }}
+                    <span class="tag-close" @click.stop="removeSelected('authPublishOrg', item)">×</span>
+                  </span>
+                  <span class="tag" v-if="queryParams.authPublishOrg.length > 2">+{{ queryParams.authPublishOrg.length - 2 }}</span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="tree-select-dropdown" v-show="activeDropdown === 'authPublishOrg'">
+                <tree-node
+                  v-for="node in orgTreeData"
+                  :key="node.code"
+                  :node="node"
+                  :selected-codes="queryParams.authPublishOrg"
+                  @toggle="toggleTreeNode"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="form-item">
+            <label class="form-label">授权书发布年份</label>
+            <div class="year-select-wrapper">
+              <div class="year-select-trigger" @click="toggleSelect('publishYear')">
+                <span>{{ queryParams.publishYear || '请选择年份' }}</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="year-select-dropdown" v-show="activeDropdown === 'publishYear'">
+                <div class="year-option" v-for="year in yearOptions" :key="year" @click="selectYear(year)">{{ year }}</div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="form-row">
-          <el-form-item label="状态">
-            <el-select
-              v-model="queryParams.status"
-              placeholder="请选择"
-              clearable
-            >
-              <el-option label="草稿" value="DRAFT" />
-              <el-option label="已发布" value="PUBLISHED" />
-              <el-option label="已失效" value="EXPIRED" />
-            </el-select>
-          </el-form-item>
+          <div class="form-item">
+            <label class="form-label">状态</label>
+            <div class="select-wrapper">
+              <div class="select-trigger" @click="toggleSelect('status')">
+                <span>{{ getStatusLabel(queryParams.status) || '请选择' }}</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="select-dropdown" v-show="activeDropdown === 'status'">
+                <div class="select-option" @click="selectStatus('')">全部</div>
+                <div class="select-option" v-for="item in statusOptions" :key="item.value" @click="selectStatus(item.value)">
+                  {{ item.label }}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </el-form>
-      <div class="query-buttons">
-        <el-button type="primary" @click="handleQuery">
-          <el-icon><Search /></el-icon>
-          查询
-        </el-button>
-        <el-button @click="handleReset">
-          <el-icon><Refresh /></el-icon>
-          重置
-        </el-button>
       </div>
-    </el-card>
+      <div class="query-buttons">
+        <button class="btn btn-primary" @click="handleQuery">查询</button>
+        <button class="btn btn-default" @click="handleReset">重置</button>
+      </div>
+    </div>
 
     <!-- 功能按钮区 -->
     <div class="action-buttons">
-      <el-button type="primary" @click="handleCreate">
-        <el-icon><Plus /></el-icon>
-        新建授权书
-      </el-button>
-      <el-button @click="handleUpdate">
-        <el-icon><Edit /></el-icon>
-        更新
-      </el-button>
-      <el-button type="success" @click="handleActivate">
-        <el-icon><Check /></el-icon>
-        生效
-      </el-button>
-      <el-button type="warning" @click="handleDeactivate">
-        <el-icon><Close /></el-icon>
-        失效
-      </el-button>
-      <el-button type="danger" @click="handleDelete">
-        <el-icon><Delete /></el-icon>
-        删除
-      </el-button>
+      <button class="btn btn-primary" @click="handleCreate">新建授权书</button>
+      <button class="btn btn-default" @click="handleUpdate">更新</button>
+      <button class="btn btn-success" @click="handleActivate">生效</button>
+      <button class="btn btn-warning" @click="handleDeactivate">失效</button>
+      <button class="btn btn-danger" @click="handleDelete">删除</button>
     </div>
 
     <!-- 数据表格区 -->
-    <el-card class="table-card" shadow="never">
-      <el-table
-        ref="tableRef"
-        :data="tableData"
-        v-loading="loading"
-        @selection-change="handleSelectionChange"
-        stripe
-        border
-      >
-        <el-table-column type="selection" width="50" align="center" />
-        <el-table-column type="index" label="序号" width="60" align="center">
-          <template #default="{ $index }">
-            {{ (pagination.pageNum - 1) * pagination.pageSize + $index + 1 }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="60" align="center">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.status === 'DRAFT'"
-              link
-              type="primary"
-              @click="goToDetail(row.id)"
-            >
-              <el-icon><Edit /></el-icon>
-            </el-button>
-          </template>
-        </el-table-column>
-        <el-table-column prop="name" label="授权书名称" min-width="150">
-          <template #default="{ row }">
-            <el-link type="primary" @click="goToDetail(row.id)">
-              {{ row.name }}
-            </el-link>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusTagType(row.status)">
-              {{ row.statusText }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="授权对象层级" width="120">
-          <template #default="{ row }">
-            {{ formatArrayText(row.authTargetLevelText) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="适用区域" width="100">
-          <template #default="{ row }">
-            {{ formatArrayText(row.applicableRegionText) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="授权发布层级" width="120">
-          <template #default="{ row }">
-            {{ formatArrayText(row.authPublishLevelText) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="授权发布组织" width="150">
-          <template #default="{ row }">
-            {{ formatArrayText(row.authPublishOrgText) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="publishYear" label="授权书发布年份" width="120" align="center" />
-        <el-table-column prop="createdBy" label="创建人" width="100" align="center" />
-        <el-table-column prop="createdAt" label="创建时间" width="160" align="center">
-          <template #default="{ row }">
-            {{ formatDateTime(row.createdAt) }}
-          </template>
-        </el-table-column>
-      </el-table>
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-checkbox"><input type="checkbox" v-model="selectAll" @change="handleSelectAll" /></th>
+            <th class="col-index">序号</th>
+            <th class="col-action">操作</th>
+            <th class="col-name">授权书名称</th>
+            <th class="col-status">状态</th>
+            <th class="col-level">授权对象层级</th>
+            <th class="col-region">适用区域</th>
+            <th class="col-level">授权发布层级</th>
+            <th class="col-org">授权发布组织</th>
+            <th class="col-year">授权书发布年份</th>
+            <th class="col-user">创建人</th>
+            <th class="col-time">创建时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, index) in tableData" :key="row.id">
+            <td class="col-checkbox"><input type="checkbox" v-model="selectedRows" :value="row.id" /></td>
+            <td class="col-index">{{ (pagination.pageNum - 1) * pagination.pageSize + index + 1 }}</td>
+            <td class="col-action">
+              <span v-if="row.status === 'DRAFT'" class="icon-btn edit-icon" @click="goToDetail(row.id)" title="编辑">✏️</span>
+            </td>
+            <td class="col-name"><a class="link" @click="goToDetail(row.id)">{{ row.name }}</a></td>
+            <td class="col-status"><span class="status-tag" :class="'status-' + row.status.toLowerCase()">{{ row.statusText }}</span></td>
+            <td class="col-level">{{ formatArrayText(row.authTargetLevelText) }}</td>
+            <td class="col-region">{{ formatArrayText(row.applicableRegionText) }}</td>
+            <td class="col-level">{{ formatArrayText(row.authPublishLevelText) }}</td>
+            <td class="col-org">{{ formatArrayText(row.authPublishOrgText) }}</td>
+            <td class="col-year">{{ row.publishYear }}</td>
+            <td class="col-user">{{ row.createdBy }}</td>
+            <td class="col-time">{{ row.createdAt }}</td>
+          </tr>
+        </tbody>
+      </table>
 
       <!-- 分页组件 -->
-      <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="pagination.pageNum"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+      <div class="pagination">
+        <span class="pagination-total">共 {{ pagination.total }} 条</span>
+        <select class="pagination-size" v-model="pagination.pageSize" @change="handleSizeChange">
+          <option :value="10">10条/页</option>
+          <option :value="20">20条/页</option>
+          <option :value="50">50条/页</option>
+          <option :value="100">100条/页</option>
+        </select>
+        <button class="pagination-btn" :disabled="pagination.pageNum === 1" @click="pagination.pageNum--">上一页</button>
+        <span class="pagination-page">{{ pagination.pageNum }} / {{ totalPages }}</span>
+        <button class="pagination-btn" :disabled="pagination.pageNum >= totalPages" @click="pagination.pageNum++">下一页</button>
+        <span class="pagination-jump">跳至<input type="number" v-model.number="jumpPage" @keyup.enter="handleJumpPage" />页</span>
       </div>
-    </el-card>
+    </div>
+
+    <!-- 消息提示 -->
+    <div class="message-box" v-if="message.show" :class="'message-' + message.type">
+      {{ message.text }}
+    </div>
+
+    <!-- 确认对话框 -->
+    <div class="modal-overlay" v-if="confirmDialog.show" @click.self="confirmDialog.onCancel">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <span class="modal-title">提示</span>
+        </div>
+        <div class="modal-body">{{ confirmDialog.text }}</div>
+        <div class="modal-footer">
+          <button class="btn btn-default" @click="confirmDialog.onCancel">取消</button>
+          <button class="btn btn-primary" @click="confirmDialog.onConfirm">确定</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Search,
-  Refresh,
-  Plus,
-  Edit,
-  Check,
-  Close,
-  Delete
-} from '@element-plus/icons-vue'
-import axios from 'axios'
+import { ref, reactive, computed, onMounted, onUnmounted, defineComponent, h } from 'vue'
 
-// ========== API配置 ==========
-const apiClient = axios.create({
-  baseURL: '/api',
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' }
+// ========== 树节点组件 ==========
+const TreeNode = defineComponent({
+  name: 'TreeNode',
+  props: {
+    node: Object,
+    selectedCodes: Array
+  },
+  emits: ['toggle'],
+  setup(props, { emit }) {
+    const expanded = ref(false)
+    const hasChildren = computed(() => props.node.children && props.node.children.length > 0)
+    const isChecked = computed(() => props.selectedCodes.includes(props.node.code))
+    const isIndeterminate = computed(() => {
+      if (!hasChildren.value) return false
+      const checkChildren = (children) => {
+        let hasChecked = false
+        let hasUnchecked = false
+        for (const child of children) {
+          if (props.selectedCodes.includes(child.code)) {
+            hasChecked = true
+          } else {
+            hasUnchecked = true
+          }
+          if (child.children) {
+            const result = checkChildren(child.children)
+            hasChecked = hasChecked || result.hasChecked
+            hasUnchecked = hasUnchecked || result.hasUnchecked
+          }
+        }
+        return { hasChecked, hasUnchecked }
+      }
+      const result = checkChildren(props.node.children)
+      return result.hasChecked && result.hasUnchecked
+    })
+
+    const toggleCheck = () => {
+      emit('toggle', props.node)
+    }
+
+    const toggleExpand = () => {
+      expanded.value = !expanded.value
+    }
+
+    return () => h('div', { class: 'tree-node' }, [
+      h('div', {
+        class: 'tree-node-content',
+        style: { paddingLeft: (props.node.level || 0) * 20 + 'px' }
+      }, [
+        hasChildren.value ? h('span', {
+          class: 'tree-expand-icon' + (expanded.value ? ' expanded' : ''),
+          onClick: toggleExpand
+        }, '▶') : h('span', { class: 'tree-expand-placeholder' }),
+        h('span', {
+          class: 'tree-checkbox' + (isChecked.value ? ' checked' : '') + (isIndeterminate.value ? ' indeterminate' : ''),
+          onClick: toggleCheck
+        }),
+        h('span', { class: 'tree-node-label', onClick: toggleCheck }, props.node.name)
+      ]),
+      hasChildren.value && expanded.value ? h('div', { class: 'tree-children' },
+        props.node.children.map(child =>
+          h(TreeNode, {
+            key: child.code,
+            node: { ...child, level: (props.node.level || 0) + 1 },
+            selectedCodes: props.selectedCodes,
+            onToggle: (n) => emit('toggle', n)
+          })
+        )
+      ) : null
+    ])
+  }
 })
 
-// 响应拦截器
-apiClient.interceptors.response.use(
-  response => response.data,
-  error => {
-    console.error('API Error:', error)
-    return Promise.reject(error)
-  }
-)
-
-// API方法
-const authLetterApi = {
-  queryList(params) {
-    return apiClient.get('/auth-letters', { params })
-  },
-  batchPublish(ids) {
-    return apiClient.put('/auth-letters/batch/publish', { ids })
-  },
-  batchExpire(ids) {
-    return apiClient.put('/auth-letters/batch/expire', { ids })
-  },
-  batchDelete(ids) {
-    return apiClient.delete('/auth-letters/batch', { data: { ids } })
-  }
-}
-
-const lookupApi = {
-  getValues(code) {
-    return apiClient.get(`/lookup/${code}`)
-  },
-  getOrgTree() {
-    return apiClient.get('/lookup/org/tree')
-  }
-}
-
 // ========== 页面逻辑 ==========
-const router = useRouter()
-
-// 表格引用
-const tableRef = ref(null)
-
-// 加载状态
-const loading = ref(false)
-
-// 选中的行
+const activeDropdown = ref('')
+const selectAll = ref(false)
 const selectedRows = ref([])
+const jumpPage = ref(1)
 
-// 查询参数
+const message = reactive({
+  show: false,
+  type: 'info',
+  text: ''
+})
+
+const confirmDialog = reactive({
+  show: false,
+  text: '',
+  onConfirm: () => {},
+  onCancel: () => {}
+})
+
 const queryParams = reactive({
   name: '',
   authTargetLevel: [],
@@ -302,118 +324,250 @@ const queryParams = reactive({
   status: ''
 })
 
-// 分页参数
 const pagination = reactive({
   pageNum: 1,
   pageSize: 10,
-  total: 0
+  total: 30
 })
 
-// 表格数据
-const tableData = ref([])
+const totalPages = computed(() => Math.ceil(pagination.total / pagination.pageSize))
 
 // 下拉选项数据
-const authTargetLevelOptions = ref([])
-const applicableRegionOptions = ref([])
-const authPublishLevelOptions = ref([])
-const orgTreeData = ref([])
+const authTargetLevelOptions = ref([
+  { code: 'ORGANIZATION', name: '机关' },
+  { code: 'REGIONAL_DEPT', name: '地区部' },
+  { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+  { code: 'OFFICE', name: '办事处' }
+])
 
-/**
- * 加载lookup数据
- * TODO: 对接真实的lookup服务
- */
-async function loadLookupData() {
-  try {
-    const targetRes = await lookupApi.getValues('AUTH_TARGET_LEVEL')
-    authTargetLevelOptions.value = targetRes.data || []
+const applicableRegionOptions = ref([
+  { code: 'EAST', name: '华东' },
+  { code: 'NORTH', name: '华北' },
+  { code: 'SOUTH', name: '华南' },
+  { code: 'WEST', name: '西部' },
+  { code: 'CENTRAL', name: '华中' }
+])
 
-    const regionRes = await lookupApi.getValues('APPLICABLE_REGION')
-    applicableRegionOptions.value = regionRes.data || []
+const authPublishLevelOptions = ref([...authTargetLevelOptions.value])
 
-    const publishLevelRes = await lookupApi.getValues('AUTH_PUBLISH_LEVEL')
-    authPublishLevelOptions.value = publishLevelRes.data || []
+const statusOptions = ref([
+  { value: 'DRAFT', label: '草稿' },
+  { value: 'PUBLISHED', label: '已发布' },
+  { value: 'EXPIRED', label: '已失效' }
+])
 
-    const orgRes = await lookupApi.getOrgTree()
-    orgTreeData.value = orgRes.data || []
-  } catch (error) {
-    console.error('加载lookup数据失败:', error)
-    // 使用模拟数据
-    authTargetLevelOptions.value = [
-      { code: 'ORGANIZATION', name: '机关' },
-      { code: 'REGIONAL_DEPT', name: '地区部' },
-      { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
-      { code: 'OFFICE', name: '办事处' }
-    ]
-    applicableRegionOptions.value = [
-      { code: 'EAST', name: '华东' },
-      { code: 'NORTH', name: '华北' },
-      { code: 'SOUTH', name: '华南' },
-      { code: 'WEST', name: '西部' },
-      { code: 'CENTRAL', name: '华中' }
-    ]
-    authPublishLevelOptions.value = authTargetLevelOptions.value
-    orgTreeData.value = [
+const yearOptions = computed(() => {
+  const years = []
+  const currentYear = new Date().getFullYear()
+  for (let i = currentYear; i >= currentYear - 10; i--) {
+    years.push(i)
+  }
+  return years
+})
+
+// 组织树数据
+const orgTreeData = ref([
+  {
+    code: 'ORG001',
+    name: '总部',
+    level: 0,
+    children: [
       {
-        code: 'ORG001',
-        name: '总部',
+        code: 'ORG002',
+        name: '华东区',
+        level: 1,
         children: [
-          {
-            code: 'ORG002',
-            name: '华东区',
-            children: [
-              { code: 'ORG003', name: '上海办事处' },
-              { code: 'ORG004', name: '杭州办事处' }
-            ]
-          },
-          {
-            code: 'ORG005',
-            name: '华北区',
-            children: [
-              { code: 'ORG006', name: '北京办事处' },
-              { code: 'ORG007', name: '天津办事处' }
-            ]
-          }
+          { code: 'ORG003', name: '上海办事处', level: 2 },
+          { code: 'ORG004', name: '杭州办事处', level: 2 }
+        ]
+      },
+      {
+        code: 'ORG005',
+        name: '华北区',
+        level: 1,
+        children: [
+          { code: 'ORG006', name: '北京办事处', level: 2 },
+          { code: 'ORG007', name: '天津办事处', level: 2 }
         ]
       }
     ]
   }
+])
+
+// 表格数据
+const tableData = ref([
+  {
+    id: 1,
+    name: '2024年度销售授权书',
+    status: 'DRAFT',
+    statusText: '草稿',
+    authTargetLevelText: ['机关', '地区部'],
+    applicableRegionText: ['华东', '华北'],
+    authPublishLevelText: ['机关'],
+    authPublishOrgText: ['总部'],
+    publishYear: 2024,
+    createdBy: 'admin',
+    createdAt: '2024-03-10 10:30:00'
+  },
+  {
+    id: 2,
+    name: '2023年度采购授权书',
+    status: 'PUBLISHED',
+    statusText: '已发布',
+    authTargetLevelText: ['代表处'],
+    applicableRegionText: ['华南'],
+    authPublishLevelText: ['地区部'],
+    authPublishOrgText: ['华南区'],
+    publishYear: 2023,
+    createdBy: 'admin',
+    createdAt: '2023-12-15 14:20:00'
+  },
+  {
+    id: 3,
+    name: '2022年度财务授权书',
+    status: 'EXPIRED',
+    statusText: '已失效',
+    authTargetLevelText: ['办事处'],
+    applicableRegionText: ['西部'],
+    authPublishLevelText: ['代表处'],
+    authPublishOrgText: ['西部区'],
+    publishYear: 2022,
+    createdBy: 'admin',
+    createdAt: '2022-06-20 09:15:00'
+  }
+])
+
+// ========== 下拉选择相关 ==========
+function toggleSelect(name) {
+  activeDropdown.value = activeDropdown.value === name ? '' : name
 }
 
-/**
- * 加载表格数据
- */
-async function loadTableData() {
-  loading.value = true
-  try {
-    const params = {
-      ...queryParams,
-      pageNum: pagination.pageNum,
-      pageSize: pagination.pageSize
-    }
-    const res = await authLetterApi.queryList(params)
-    if (res.code === 200) {
-      tableData.value = res.data.list || []
-      pagination.total = res.data.total || 0
-    }
-  } catch (error) {
-    console.error('加载数据失败:', error)
-    ElMessage.error('加载数据失败')
-  } finally {
-    loading.value = false
+function toggleMultiSelect(field, value) {
+  const index = queryParams[field].indexOf(value)
+  if (index > -1) {
+    queryParams[field].splice(index, 1)
+  } else {
+    queryParams[field].push(value)
   }
 }
 
-/**
- * 查询按钮点击
- */
-function handleQuery() {
-  pagination.pageNum = 1
-  loadTableData()
+function removeSelected(field, value) {
+  const index = queryParams[field].indexOf(value)
+  if (index > -1) {
+    queryParams[field].splice(index, 1)
+  }
 }
 
-/**
- * 重置按钮点击
- */
+function selectYear(year) {
+  queryParams.publishYear = year
+  activeDropdown.value = ''
+}
+
+function selectStatus(value) {
+  queryParams.status = value
+  activeDropdown.value = ''
+}
+
+function getStatusLabel(value) {
+  const item = statusOptions.value.find(s => s.value === value)
+  return item ? item.label : ''
+}
+
+function getSelectedLabels(codes, options) {
+  return codes.map(code => {
+    const item = options.find(o => o.code === code)
+    return item ? item.name : code
+  })
+}
+
+function getOrgName(code) {
+  const findNode = (nodes, targetCode) => {
+    for (const node of nodes) {
+      if (node.code === targetCode) return node.name
+      if (node.children) {
+        const found = findNode(node.children, targetCode)
+        if (found) return found
+      }
+    }
+    return null
+  }
+  return findNode(orgTreeData.value, code) || code
+}
+
+// ========== 树形选择相关 ==========
+function toggleTreeNode(node) {
+  const toggleNodeAndChildren = (n, shouldCheck) => {
+    const index = queryParams.authPublishOrg.indexOf(n.code)
+    if (shouldCheck && index === -1) {
+      queryParams.authPublishOrg.push(n.code)
+    } else if (!shouldCheck && index > -1) {
+      queryParams.authPublishOrg.splice(index, 1)
+    }
+    if (n.children) {
+      n.children.forEach(child => toggleNodeAndChildren(child, shouldCheck))
+    }
+  }
+
+  const isChecked = queryParams.authPublishOrg.includes(node.code)
+  toggleNodeAndChildren(node, !isChecked)
+}
+
+// ========== 表格相关 ==========
+function handleSelectAll() {
+  if (selectAll.value) {
+    selectedRows.value = tableData.value.map(row => row.id)
+  } else {
+    selectedRows.value = []
+  }
+}
+
+function handleSizeChange() {
+  pagination.pageNum = 1
+}
+
+function handleJumpPage() {
+  if (jumpPage.value >= 1 && jumpPage.value <= totalPages.value) {
+    pagination.pageNum = jumpPage.value
+  }
+}
+
+function formatArrayText(arr) {
+  if (!arr || arr.length === 0) return '-'
+  return arr.join('、')
+}
+
+// ========== 消息提示 ==========
+function showMessage(text, type = 'info') {
+  message.text = text
+  message.type = type
+  message.show = true
+  setTimeout(() => {
+    message.show = false
+  }, 3000)
+}
+
+// ========== 确认对话框 ==========
+function showConfirm(text) {
+  return new Promise((resolve) => {
+    confirmDialog.show = true
+    confirmDialog.text = text
+    confirmDialog.onConfirm = () => {
+      confirmDialog.show = false
+      resolve(true)
+    }
+    confirmDialog.onCancel = () => {
+      confirmDialog.show = false
+      resolve(false)
+    }
+  })
+}
+
+// ========== 业务操作 ==========
+function handleQuery() {
+  pagination.pageNum = 1
+  showMessage('查询成功', 'success')
+}
+
 function handleReset() {
   queryParams.name = ''
   queryParams.authTargetLevel = []
@@ -423,242 +577,130 @@ function handleReset() {
   queryParams.publishYear = null
   queryParams.status = ''
   pagination.pageNum = 1
-  loadTableData()
+  showMessage('已重置查询条件', 'info')
 }
 
-/**
- * 表格选择变化
- */
-function handleSelectionChange(selection) {
-  selectedRows.value = selection
-}
-
-/**
- * 分页大小变化
- */
-function handleSizeChange(size) {
-  pagination.pageSize = size
-  loadTableData()
-}
-
-/**
- * 页码变化
- */
-function handleCurrentChange(page) {
-  pagination.pageNum = page
-  loadTableData()
-}
-
-/**
- * 检查是否选中数据
- */
 function checkSelection() {
   if (selectedRows.value.length === 0) {
-    ElMessage.warning('请先选择数据')
+    showMessage('请先选择数据', 'warning')
     return false
   }
   return true
 }
 
-/**
- * 获取选中数据的ID列表
- */
-function getSelectedIds() {
-  return selectedRows.value.map(row => row.id)
-}
-
-/**
- * 新建授权书
- * TODO: 跳转到新建页面
- */
 function handleCreate() {
-  ElMessage.info('新建授权书功能待实现')
-  // router.push('/auth-letters/create')
+  showMessage('新建授权书功能待实现', 'info')
 }
 
-/**
- * 更新
- * TODO: 实现批量更新逻辑
- */
 function handleUpdate() {
   if (!checkSelection()) return
-  ElMessage.info('更新功能待实现')
+  showMessage('更新功能待实现', 'info')
 }
 
-/**
- * 生效
- */
 async function handleActivate() {
   if (!checkSelection()) return
-
-  const ids = getSelectedIds()
-  try {
-    await ElMessageBox.confirm(
-      `确定要将选中的 ${ids.length} 条数据发布生效吗？`,
-      '提示',
-      { type: 'warning' }
-    )
-    const res = await authLetterApi.batchPublish(ids)
-    if (res.code === 200) {
-      ElMessage.success(res.message || '操作成功')
-      loadTableData()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('操作失败')
-    }
+  const confirmed = await showConfirm(`确定要将选中的 ${selectedRows.value.length} 条数据发布生效吗？`)
+  if (confirmed) {
+    showMessage('操作成功', 'success')
   }
 }
 
-/**
- * 失效
- */
 async function handleDeactivate() {
   if (!checkSelection()) return
-
-  const ids = getSelectedIds()
-  try {
-    await ElMessageBox.confirm(
-      `确定要将选中的 ${ids.length} 条数据设为失效吗？`,
-      '提示',
-      { type: 'warning' }
-    )
-    const res = await authLetterApi.batchExpire(ids)
-    if (res.code === 200) {
-      ElMessage.success(res.message || '操作成功')
-      loadTableData()
-    } else {
-      ElMessage.error(res.message || '操作失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('操作失败')
-    }
+  const confirmed = await showConfirm(`确定要将选中的 ${selectedRows.value.length} 条数据设为失效吗？`)
+  if (confirmed) {
+    showMessage('操作成功', 'success')
   }
 }
 
-/**
- * 删除
- */
 async function handleDelete() {
   if (!checkSelection()) return
-
-  const ids = getSelectedIds()
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除选中的 ${ids.length} 条数据吗？`,
-      '提示',
-      { type: 'warning' }
-    )
-    const res = await authLetterApi.batchDelete(ids)
-    if (res.code === 200) {
-      ElMessage.success(res.message || '删除成功')
-      loadTableData()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
+  const confirmed = await showConfirm(`确定要删除选中的 ${selectedRows.value.length} 条数据吗？`)
+  if (confirmed) {
+    showMessage('删除成功', 'success')
   }
 }
 
-/**
- * 跳转到详情页
- */
 function goToDetail(id) {
-  router.push(`/auth-letters/${id}`)
+  showMessage(`跳转到详情页: ID=${id}`, 'info')
 }
 
-/**
- * 获取状态标签类型
- */
-function getStatusTagType(status) {
-  const types = {
-    DRAFT: 'info',
-    PUBLISHED: 'success',
-    EXPIRED: 'danger'
+// ========== 生命周期 ==========
+function handleClickOutside(event) {
+  if (!event.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
+    activeDropdown.value = ''
   }
-  return types[status] || 'info'
 }
 
-/**
- * 格式化数组文本
- */
-function formatArrayText(arr) {
-  if (!arr || arr.length === 0) return '-'
-  return arr.join('、')
-}
-
-/**
- * 格式化日期时间
- */
-function formatDateTime(dateTime) {
-  if (!dateTime) return '-'
-  const date = new Date(dateTime)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  const second = String(date.getSeconds()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hour}:${minute}:${second}`
-}
-
-// 初始化
 onMounted(() => {
-  loadLookupData()
-  loadTableData()
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
 <style scoped>
+* {
+  box-sizing: border-box;
+}
+
 .auth-letter-list-page {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #333;
 }
 
+/* 查询卡片 */
 .query-card {
+  background: #fff;
+  border-radius: 4px;
+  padding: 20px;
   margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .query-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 20px;
 }
 
-.query-form :deep(.el-form-item) {
-  margin-bottom: 0;
+.form-item {
   display: flex;
   align-items: center;
 }
 
-.query-form :deep(.el-form-item__label) {
-  width: auto;
-  min-width: 100px;
+.form-label {
+  width: 100px;
+  text-align: right;
+  color: #666;
   flex-shrink: 0;
+  margin-right: 12px;
 }
 
-.query-form :deep(.el-form-item__content) {
+.form-input {
   flex: 1;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
-.query-form :deep(.el-input),
-.query-form :deep(.el-select),
-.query-form :deep(.el-date-picker),
-.query-form :deep(.el-tree-select) {
-  width: 100%;
+.form-input:focus {
+  border-color: #409eff;
 }
 
 .query-buttons {
@@ -667,27 +709,475 @@ onMounted(() => {
   gap: 10px;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid #eee;
 }
 
+/* 按钮样式 */
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background: #409eff;
+  border-color: #409eff;
+  color: #fff;
+}
+
+.btn-success {
+  background: #67c23a;
+  border-color: #67c23a;
+  color: #fff;
+}
+
+.btn-warning {
+  background: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
+
+.btn-danger {
+  background: #f56c6c;
+  border-color: #f56c6c;
+  color: #fff;
+}
+
+.btn-default {
+  background: #fff;
+  color: #333;
+}
+
+/* 下拉选择 */
+.multi-select-wrapper,
+.tree-select-wrapper,
+.select-wrapper,
+.year-select-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.multi-select-trigger,
+.tree-select-trigger,
+.select-trigger,
+.year-select-trigger {
+  height: 32px;
+  padding: 0 30px 0 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.multi-select-trigger:hover,
+.tree-select-trigger:hover,
+.select-trigger:hover,
+.year-select-trigger:hover {
+  border-color: #c0c4cc;
+}
+
+.arrow {
+  position: absolute;
+  right: 10px;
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+.placeholder {
+  color: #c0c4cc;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag {
+  background: #f0f2f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tag-close {
+  cursor: pointer;
+  color: #909399;
+}
+
+.tag-close:hover {
+  color: #409eff;
+}
+
+.multi-select-dropdown,
+.tree-select-dropdown,
+.select-dropdown,
+.year-select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.select-option,
+.year-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select-option:hover,
+.year-option:hover {
+  background: #f5f7fa;
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #dcdfe6;
+  border-radius: 2px;
+  display: inline-block;
+  position: relative;
+}
+
+.checkbox.checked {
+  background: #409eff;
+  border-color: #409eff;
+}
+
+.checkbox.checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 树形选择 */
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.tree-node-content:hover {
+  background: #f5f7fa;
+}
+
+.tree-expand-icon {
+  width: 16px;
+  font-size: 10px;
+  color: #c0c4cc;
+  transition: transform 0.2s;
+}
+
+.tree-expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-expand-placeholder {
+  width: 16px;
+}
+
+.tree-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #dcdfe6;
+  border-radius: 2px;
+  margin-right: 8px;
+  position: relative;
+}
+
+.tree-checkbox.checked {
+  background: #409eff;
+  border-color: #409eff;
+}
+
+.tree-checkbox.checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tree-checkbox.indeterminate {
+  background: #409eff;
+  border-color: #409eff;
+}
+
+.tree-checkbox.indeterminate::after {
+  content: '-';
+  color: #fff;
+  font-size: 12px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tree-node-label {
+  font-size: 14px;
+}
+
+/* 功能按钮区 */
 .action-buttons {
   display: flex;
   gap: 10px;
   margin-bottom: 16px;
 }
 
+/* 表格 */
 .table-card {
-  margin-bottom: 16px;
+  background: #fff;
+  border-radius: 4px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-.pagination-container {
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 8px;
+  text-align: left;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.data-table th {
+  background: #f5f7fa;
+  font-weight: 600;
+  color: #909399;
+}
+
+.data-table tbody tr:hover {
+  background: #f5f7fa;
+}
+
+.col-checkbox {
+  width: 50px;
+  text-align: center;
+}
+
+.col-index {
+  width: 60px;
+  text-align: center;
+}
+
+.col-action {
+  width: 60px;
+  text-align: center;
+}
+
+.col-status {
+  width: 80px;
+  text-align: center;
+}
+
+.col-year,
+.col-user {
+  width: 100px;
+  text-align: center;
+}
+
+.col-time {
+  width: 160px;
+  text-align: center;
+}
+
+.icon-btn {
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.edit-icon:hover {
+  opacity: 0.7;
+}
+
+.link {
+  color: #409eff;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.status-draft {
+  background: #f4f4f5;
+  color: #909399;
+}
+
+.status-published {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+
+.status-expired {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+/* 分页 */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.pagination-size {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
+.pagination-btn {
+  padding: 4px 12px;
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pagination-btn:disabled {
+  color: #c0c4cc;
+  cursor: not-allowed;
+}
+
+.pagination-jump input {
+  width: 50px;
+  height: 28px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  text-align: center;
+  margin: 0 4px;
+}
+
+/* 消息提示 */
+.message-box {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 4px;
+  z-index: 1000;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.message-info {
+  background: #edf2fc;
+  color: #909399;
+  border: 1px solid #dcdfe6;
+}
+
+.message-success {
+  background: #f0f9eb;
+  color: #67c23a;
+  border: 1px solid #e1f3d8;
+}
+
+.message-warning {
+  background: #fdf6ec;
+  color: #e6a23c;
+  border: 1px solid #faecd8;
+}
+
+.message-error {
+  background: #fef0f0;
+  color: #f56c6c;
+  border: 1px solid #fde2e2;
+}
+
+/* 对话框 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog {
+  background: #fff;
+  border-radius: 8px;
+  min-width: 400px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-title {
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.el-tag {
-  min-width: 60px;
-  text-align: center;
+  gap: 10px;
 }
 </style>
