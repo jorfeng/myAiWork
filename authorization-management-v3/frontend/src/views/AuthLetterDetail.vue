@@ -422,27 +422,32 @@
   </div>
 </template>
 
-<script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, defineComponent, h } from 'vue'
-
+<script>
 // ========== 树节点组件 ==========
-const TreeNode = defineComponent({
+const TreeNode = {
   name: 'TreeNode',
   props: {
     node: Object,
     selectedCodes: Array
   },
-  emits: ['toggle'],
-  setup(props, { emit }) {
-    const expanded = ref(false)
-    const hasChildren = computed(() => props.node.children && props.node.children.length > 0)
-    const isChecked = computed(() => props.selectedCodes.includes(props.node.code))
-    const isIndeterminate = computed(() => {
-      if (!hasChildren.value) return false
+  data() {
+    return {
+      expanded: false
+    }
+  },
+  computed: {
+    hasChildren() {
+      return this.node.children && this.node.children.length > 0
+    },
+    isChecked() {
+      return this.selectedCodes.includes(this.node.code)
+    },
+    isIndeterminate() {
+      if (!this.hasChildren) return false
       const checkChildren = (children) => {
         let hasChecked = false, hasUnchecked = false
         for (const child of children) {
-          if (props.selectedCodes.includes(child.code)) hasChecked = true
+          if (this.selectedCodes.includes(child.code)) hasChecked = true
           else hasUnchecked = true
           if (child.children) {
             const r = checkChildren(child.children)
@@ -452,538 +457,514 @@ const TreeNode = defineComponent({
         }
         return { hasChecked, hasUnchecked }
       }
-      const r = checkChildren(props.node.children)
+      const r = checkChildren(this.node.children)
       return r.hasChecked && r.hasUnchecked
-    })
-
-    return () => h('div', { class: 'tree-node' }, [
-      h('div', {
-        class: 'tree-node-content',
-        style: { paddingLeft: (props.node.level || 0) * 20 + 'px' }
-      }, [
-        hasChildren.value ? h('span', {
-          class: 'tree-expand-icon' + (expanded.value ? ' expanded' : ''),
-          onClick: () => expanded.value = !expanded.value
-        }, '▶') : h('span', { class: 'tree-expand-placeholder' }),
-        h('span', {
-          class: 'tree-checkbox' + (isChecked.value ? ' checked' : '') + (isIndeterminate.value ? ' indeterminate' : ''),
-          onClick: () => emit('toggle', props.node)
-        }),
-        h('span', { class: 'tree-node-label', onClick: () => emit('toggle', props.node) }, props.node.name)
-      ]),
-      hasChildren.value && expanded.value ? h('div', { class: 'tree-children' },
-        props.node.children.map(child =>
-          h(TreeNode, {
-            key: child.code,
-            node: { ...child, level: (props.node.level || 0) + 1 },
-            selectedCodes: props.selectedCodes,
-            onToggle: (n) => emit('toggle', n)
-          })
-        )
-      ) : null
-    ])
-  }
-})
+    }
+  },
+  methods: {
+    toggleCheck() {
+      this.$emit('toggle', this.node)
+    },
+    toggleExpand() {
+      this.expanded = !this.expanded
+    }
+  },
+  template: `
+    <div class="tree-node">
+      <div class="tree-node-content" :style="{ paddingLeft: (node.level || 0) * 20 + 'px' }">
+        <span v-if="hasChildren" class="tree-expand-icon" :class="{ expanded: expanded }" @click="toggleExpand">▶</span>
+        <span v-else class="tree-expand-placeholder"></span>
+        <span class="tree-checkbox" :class="{ checked: isChecked, indeterminate: isIndeterminate }" @click="toggleCheck"></span>
+        <span class="tree-node-label" @click="toggleCheck">{{ node.name }}</span>
+      </div>
+      <div v-if="hasChildren && expanded" class="tree-children">
+        <tree-node
+          v-for="child in node.children"
+          :key="child.code"
+          :node="{ ...child, level: (node.level || 0) + 1 }"
+          :selected-codes="selectedCodes"
+          @toggle="$emit('toggle', $event)"
+        />
+      </div>
+    </div>
+  `
+}
 
 // ========== 条件项组件 ==========
-const ConditionItem = defineComponent({
+const ConditionItem = {
   name: 'ConditionItem',
   props: {
     condition: Object,
     fieldOptions: Array
   },
-  emits: ['remove', 'update'],
-  setup(props, { emit }) {
-    const operatorOptions = [
-      { value: 'EQ', label: '等于' },
-      { value: 'NE', label: '不等于' },
-      { value: 'GT', label: '大于' },
-      { value: 'GE', label: '大于等于' },
-      { value: 'LT', label: '小于' },
-      { value: 'LE', label: '小于等于' },
-      { value: 'IN', label: '包含' },
-      { value: 'NOT_IN', label: '不包含' }
-    ]
-    const compareTypeOptions = [
-      { value: 'FIELD', label: '对比字段' },
-      { value: 'NUMBER', label: '数值' },
-      { value: 'TEXT', label: '文本' }
-    ]
-    const unitOptions = ['万', '千万', '亿', '元', '美元', '欧元']
-
-    const updateCondition = (key, value) => {
-      emit('update', { ...props.condition, [key]: value })
+  data() {
+    return {
+      operatorOptions: [
+        { value: 'EQ', label: '等于' },
+        { value: 'NE', label: '不等于' },
+        { value: 'GT', label: '大于' },
+        { value: 'GE', label: '大于等于' },
+        { value: 'LT', label: '小于' },
+        { value: 'LE', label: '小于等于' },
+        { value: 'IN', label: '包含' },
+        { value: 'NOT_IN', label: '不包含' }
+      ],
+      compareTypeOptions: [
+        { value: 'FIELD', label: '对比字段' },
+        { value: 'NUMBER', label: '数值' },
+        { value: 'TEXT', label: '文本' }
+      ],
+      unitOptions: ['万', '千万', '亿', '元', '美元', '欧元']
     }
-
-    return () => h('div', { class: 'condition-item' }, [
-      h('span', { class: 'delete-btn', onClick: () => emit('remove') }, '×'),
-      h('select', {
-        class: 'condition-select field-select',
-        value: props.condition.field,
-        onChange: (e) => updateCondition('field', e.target.value)
-      }, [
-        h('option', { value: '' }, '请选择字段'),
-        ...props.fieldOptions.map(f => h('option', { value: f.code }, f.name))
-      ]),
-      h('select', {
-        class: 'condition-select',
-        value: props.condition.operator,
-        onChange: (e) => updateCondition('operator', e.target.value)
-      }, operatorOptions.map(o => h('option', { value: o.value }, o.label))),
-      h('select', {
-        class: 'condition-select',
-        value: props.condition.compareType,
-        onChange: (e) => updateCondition('compareType', e.target.value)
-      }, compareTypeOptions.map(c => h('option', { value: c.value }, c.label))),
-      props.condition.compareType === 'FIELD' ? h('select', {
-        class: 'condition-select',
-        value: props.condition.compareField,
-        onChange: (e) => updateCondition('compareField', e.target.value)
-      }, [
-        h('option', { value: '' }, '请选择'),
-        ...props.fieldOptions.map(f => h('option', { value: f.code }, f.name))
-      ]) : null,
-      props.condition.compareType === 'NUMBER' ? [
-        h('input', {
-          type: 'number',
-          class: 'condition-input',
-          value: props.condition.compareValue,
-          onInput: (e) => updateCondition('compareValue', e.target.value),
-          placeholder: '数值'
-        }),
-        h('select', {
-          class: 'condition-select unit-select',
-          value: props.condition.unit,
-          onChange: (e) => updateCondition('unit', e.target.value)
-        }, unitOptions.map(u => h('option', { value: u }, u)))
-      ] : null,
-      props.condition.compareType === 'TEXT' ? h('input', {
-        type: 'text',
-        class: 'condition-input',
-        value: props.condition.compareValue,
-        onInput: (e) => updateCondition('compareValue', e.target.value),
-        placeholder: '文本'
-      }) : null
-    ])
-  }
-})
-
-// ========== 页面数据 ==========
-const activeDropdown = ref('')
-const pageStatus = ref('DRAFT')
-
-const message = reactive({ show: false, type: 'info', text: '' })
-const confirmDialog = reactive({ show: false, text: '', onConfirm: () => {}, onCancel: () => {} })
-
-// 基本信息表单
-const formData = reactive({
-  name: '',
-  authPublishLevel: [],
-  authPublishOrg: [],
-  authTargetLevel: [],
-  applicableRegion: [],
-  publishYear: null,
-  contentSummary: ''
-})
-
-// 下拉选项
-const authPublishLevelOptions = ref([
-  { code: 'ORGANIZATION', name: '机关' },
-  { code: 'REGIONAL_DEPT', name: '地区部' },
-  { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
-  { code: 'OFFICE', name: '办事处' }
-])
-const authTargetLevelOptions = ref([...authPublishLevelOptions.value])
-const applicableRegionOptions = ref([
-  { code: 'EAST', name: '华东' }, { code: 'NORTH', name: '华北' },
-  { code: 'SOUTH', name: '华南' }, { code: 'WEST', name: '西部' }, { code: 'CENTRAL', name: '华中' }
-])
-
-const orgTreeData = ref([
-  { code: 'ORG001', name: '总部', level: 0, children: [
-    { code: 'ORG002', name: '华东区', level: 1, children: [
-      { code: 'ORG003', name: '上海办事处', level: 2 },
-      { code: 'ORG004', name: '杭州办事处', level: 2 }
-    ]},
-    { code: 'ORG005', name: '华北区', level: 1, children: [
-      { code: 'ORG006', name: '北京办事处', level: 2 }
-    ]}
-  ]}
-])
-
-const yearOptions = computed(() => {
-  const years = []
-  for (let i = new Date().getFullYear(); i >= new Date().getFullYear() - 10; i--) years.push(i)
-  return years
-})
-
-// 附件数据
-const selectedAttachments = ref([])
-const attachmentSelectAll = ref(false)
-const attachmentData = ref([
-  { id: 1, fileName: '授权书原件.pdf', docTypeName: '原件', createdBy: 'admin', createdAt: '2024-03-10 10:30:00', updatedBy: '', updatedAt: '' },
-  { id: 2, fileName: '授权书附件.docx', docTypeName: '附件', createdBy: 'admin', createdAt: '2024-03-10 11:00:00', updatedBy: '-', updatedAt: '-' }
-])
-const attachmentPage = reactive({ pageNum: 1, pageSize: 10, total: 2 })
-
-// 授权规则数据
-const selectedScenes = ref([])
-const sceneSelectAll = ref(false)
-const sceneData = ref([
-  { id: 1, sceneName: '销售场景', industryText: 'ICT、消费者', businessScenario: '设备销售', ruleDetail: '单笔金额不超过500万的销售订单可自主决策', decisionLevel: '地区部', createdBy: 'admin', createdAt: '2024-03-10 10:30:00', updatedBy: '-', updatedAt: '-' }
-])
-const scenePage = reactive({ pageNum: 1, pageSize: 10, total: 1 })
-
-// 场景弹窗
-const sceneDialogVisible = ref(false)
-const editingScene = ref(null)
-const sceneForm = reactive({
-  name: '',
-  industry: [],
-  businessScenario: '',
-  decisionLevel: '',
-  ruleDetail: '',
-  conditions: [],
-  conditionLogics: []
-})
-
-// 场景相关选项
-const industryTreeData = ref([
-  { code: 'IND001', name: 'ICT', level: 0, children: [
-    { code: 'IND001_1', name: '运营商', level: 1 },
-    { code: 'IND001_2', name: '企业', level: 1 }
-  ]},
-  { code: 'IND002', name: '消费者', level: 0, children: [
-    { code: 'IND002_1', name: '手机', level: 1 },
-    { code: 'IND002_2', name: 'PC', level: 1 }
-  ]},
-  { code: 'IND003', name: '云计算', level: 0 }
-])
-const businessScenarioOptions = ref([
-  { code: 'BS001', name: '设备销售' }, { code: 'BS002', name: '软件销售' },
-  { code: 'BS003', name: '服务销售' }, { code: 'BS004', name: '物料采购' }
-])
-const decisionLevelOptions = ref([
-  { code: 'ORGANIZATION', name: '机关' },
-  { code: 'REGIONAL_DEPT', name: '地区部' },
-  { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
-  { code: 'OFFICE', name: '办事处' }
-])
-const fieldOptions = ref([
-  { code: 'amount', name: '金额' }, { code: 'quantity', name: '数量' },
-  { code: 'customer_level', name: '客户等级' }, { code: 'product_type', name: '产品类型' }
-])
-
-// 按钮状态
-const canSave = computed(() => pageStatus.value === 'DRAFT')
-const canPublish = computed(() => pageStatus.value === 'DRAFT')
-const canSaveAndPublish = computed(() => pageStatus.value === 'DRAFT')
-const canDelete = computed(() => pageStatus.value === 'DRAFT')
-
-// ========== 工具方法 ==========
-function toggleDropdown(name) {
-  activeDropdown.value = activeDropdown.value === name ? '' : name
-}
-
-function toggleMultiSelect(field, value) {
-  const i = formData[field].indexOf(value)
-  if (i > -1) formData[field].splice(i, 1)
-  else formData[field].push(value)
-}
-
-function removeFormItem(field, value) {
-  const i = formData[field].indexOf(value)
-  if (i > -1) formData[field].splice(i, 1)
-}
-
-function selectYear(year) {
-  formData.publishYear = year
-  activeDropdown.value = ''
-}
-
-function getOptionLabel(code, options) {
-  const item = options.find(o => o.code === code)
-  return item ? item.name : code
-}
-
-function getOrgName(code) {
-  const find = (nodes) => {
-    for (const n of nodes) {
-      if (n.code === code) return n.name
-      if (n.children) { const f = find(n.children); if (f) return f }
+  },
+  methods: {
+    updateCondition(key, value) {
+      this.$emit('update', { ...this.condition, [key]: value })
+    },
+    removeCondition() {
+      this.$emit('remove')
     }
-    return null
-  }
-  return find(orgTreeData.value) || code
+  },
+  template: `
+    <div class="condition-item">
+      <span class="delete-btn" @click="removeCondition">×</span>
+      <select class="condition-select field-select" :value="condition.field" @change="updateCondition('field', $event.target.value)">
+        <option value="">请选择字段</option>
+        <option v-for="f in fieldOptions" :key="f.code" :value="f.code">{{ f.name }}</option>
+      </select>
+      <select class="condition-select" :value="condition.operator" @change="updateCondition('operator', $event.target.value)">
+        <option v-for="o in operatorOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+      </select>
+      <select class="condition-select" :value="condition.compareType" @change="updateCondition('compareType', $event.target.value)">
+        <option v-for="c in compareTypeOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+      </select>
+      <select v-if="condition.compareType === 'FIELD'" class="condition-select" :value="condition.compareField" @change="updateCondition('compareField', $event.target.value)">
+        <option value="">请选择</option>
+        <option v-for="f in fieldOptions" :key="f.code" :value="f.code">{{ f.name }}</option>
+      </select>
+      <template v-if="condition.compareType === 'NUMBER'">
+        <input type="number" class="condition-input" :value="condition.compareValue" @input="updateCondition('compareValue', $event.target.value)" placeholder="数值" />
+        <select class="condition-select unit-select" :value="condition.unit" @change="updateCondition('unit', $event.target.value)">
+          <option v-for="u in unitOptions" :key="u" :value="u">{{ u }}</option>
+        </select>
+      </template>
+      <input v-if="condition.compareType === 'TEXT'" type="text" class="condition-input" :value="condition.compareValue" @input="updateCondition('compareValue', $event.target.value)" placeholder="文本" />
+    </div>
+  `
 }
 
-function toggleOrgNode(node) {
-  const toggle = (n, check) => {
-    const i = formData.authPublishOrg.indexOf(n.code)
-    if (check && i === -1) formData.authPublishOrg.push(n.code)
-    else if (!check && i > -1) formData.authPublishOrg.splice(i, 1)
-    if (n.children) n.children.forEach(c => toggle(c, check))
-  }
-  toggle(node, !formData.authPublishOrg.includes(node.code))
-}
-
-// ========== 附件操作 ==========
-function handleAttachmentSelectAll() {
-  if (attachmentSelectAll.value) selectedAttachments.value = attachmentData.value.map(r => r.id)
-  else selectedAttachments.value = []
-}
-
-function handleUpload() { showMessage('上传功能待实现', 'info') }
-
-function handleDownloadAttachment() {
-  if (selectedAttachments.value.length === 0) { showMessage('请先选择要下载的附件', 'warning'); return }
-  showMessage('批量下载功能待实现', 'info')
-}
-
-function handleDeleteAttachment() {
-  if (selectedAttachments.value.length === 0) { showMessage('请先选择要删除的附件', 'warning'); return }
-  showConfirm(`确定要删除选中的 ${selectedAttachments.value.length} 个附件吗？`).then(ok => {
-    if (ok) showMessage('删除成功', 'success')
-  })
-}
-
-function handleDeleteAttachmentRow(row) {
-  showConfirm('确定要删除该附件吗？').then(ok => {
-    if (ok) showMessage('删除成功', 'success')
-  })
-}
-
-function handleDownloadRow(row) { showMessage(`下载文件: ${row.fileName}`, 'info') }
-function handleEncryptRow(row) { showMessage(`加密文件: ${row.fileName}`, 'info') }
-
-// ========== 授权规则操作 ==========
-function handleSceneSelectAll() {
-  if (sceneSelectAll.value) selectedScenes.value = sceneData.value.map(r => r.id)
-  else selectedScenes.value = []
-}
-
-function handleDeleteScene() {
-  if (selectedScenes.value.length === 0) { showMessage('请先选择要删除的场景', 'warning'); return }
-  showConfirm(`确定要删除选中的 ${selectedScenes.value.length} 个场景吗？`).then(ok => {
-    if (ok) showMessage('删除成功', 'success')
-  })
-}
-
-function handleDeleteSceneRow(row) {
-  showConfirm('确定要删除该场景吗？').then(ok => {
-    if (ok) showMessage('删除成功', 'success')
-  })
-}
-
-// ========== 场景弹窗 ==========
-function openSceneDialog(scene = null) {
-  editingScene.value = scene
-  if (scene) {
-    sceneForm.name = scene.sceneName
-    sceneForm.industry = scene.industry || []
-    sceneForm.businessScenario = scene.businessScenarioCode || ''
-    sceneForm.decisionLevel = scene.decisionLevelCode || ''
-    sceneForm.ruleDetail = scene.ruleDetail || ''
-    sceneForm.conditions = scene.conditions || []
-    sceneForm.conditionLogics = scene.conditionLogics || []
-  } else {
-    sceneForm.name = ''
-    sceneForm.industry = []
-    sceneForm.businessScenario = ''
-    sceneForm.decisionLevel = ''
-    sceneForm.ruleDetail = ''
-    sceneForm.conditions = []
-    sceneForm.conditionLogics = []
-  }
-  sceneDialogVisible.value = true
-}
-
-function closeSceneDialog() {
-  sceneDialogVisible.value = false
-  editingScene.value = null
-}
-
-function saveScene() {
-  if (!sceneForm.name) { showMessage('请输入场景名称', 'warning'); return }
-  if (sceneForm.industry.length === 0) { showMessage('请选择产业', 'warning'); return }
-  if (!sceneForm.businessScenario) { showMessage('请选择业务场景', 'warning'); return }
-  if (!sceneForm.decisionLevel) { showMessage('请选择决策层级', 'warning'); return }
-  if (!sceneForm.ruleDetail) { showMessage('请输入具体规则', 'warning'); return }
-
-  showMessage(editingScene.value ? '编辑成功' : '添加成功', 'success')
-  closeSceneDialog()
-}
-
-function getIndustryName(code) {
-  const find = (nodes) => {
-    for (const n of nodes) {
-      if (n.code === code) return n.name
-      if (n.children) { const f = find(n.children); if (f) return f }
+export default {
+  name: 'AuthLetterDetail',
+  components: {
+    TreeNode,
+    ConditionItem
+  },
+  data() {
+    return {
+      activeDropdown: '',
+      pageStatus: 'DRAFT',
+      message: { show: false, type: 'info', text: '' },
+      confirmDialog: { show: false, text: '', onConfirm: () => {}, onCancel: () => {} },
+      formData: {
+        name: '',
+        authPublishLevel: [],
+        authPublishOrg: [],
+        authTargetLevel: [],
+        applicableRegion: [],
+        publishYear: null,
+        contentSummary: ''
+      },
+      authPublishLevelOptions: [
+        { code: 'ORGANIZATION', name: '机关' },
+        { code: 'REGIONAL_DEPT', name: '地区部' },
+        { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+        { code: 'OFFICE', name: '办事处' }
+      ],
+      authTargetLevelOptions: [
+        { code: 'ORGANIZATION', name: '机关' },
+        { code: 'REGIONAL_DEPT', name: '地区部' },
+        { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+        { code: 'OFFICE', name: '办事处' }
+      ],
+      applicableRegionOptions: [
+        { code: 'EAST', name: '华东' },
+        { code: 'NORTH', name: '华北' },
+        { code: 'SOUTH', name: '华南' },
+        { code: 'WEST', name: '西部' },
+        { code: 'CENTRAL', name: '华中' }
+      ],
+      orgTreeData: [
+        {
+          code: 'ORG001',
+          name: '总部',
+          level: 0,
+          children: [
+            {
+              code: 'ORG002',
+              name: '华东区',
+              level: 1,
+              children: [
+                { code: 'ORG003', name: '上海办事处', level: 2 },
+                { code: 'ORG004', name: '杭州办事处', level: 2 }
+              ]
+            },
+            {
+              code: 'ORG005',
+              name: '华北区',
+              level: 1,
+              children: [
+                { code: 'ORG006', name: '北京办事处', level: 2 }
+              ]
+            }
+          ]
+        }
+      ],
+      selectedAttachments: [],
+      attachmentSelectAll: false,
+      attachmentData: [
+        { id: 1, fileName: '授权书原件.pdf', docTypeName: '原件', createdBy: 'admin', createdAt: '2024-03-10 10:30:00', updatedBy: '', updatedAt: '' },
+        { id: 2, fileName: '授权书附件.docx', docTypeName: '附件', createdBy: 'admin', createdAt: '2024-03-10 11:00:00', updatedBy: '-', updatedAt: '-' }
+      ],
+      attachmentPage: { pageNum: 1, pageSize: 10, total: 2 },
+      selectedScenes: [],
+      sceneSelectAll: false,
+      sceneData: [
+        { id: 1, sceneName: '销售场景', industryText: 'ICT、消费者', businessScenario: '设备销售', ruleDetail: '单笔金额不超过500万的销售订单可自主决策', decisionLevel: '地区部', createdBy: 'admin', createdAt: '2024-03-10 10:30:00', updatedBy: '-', updatedAt: '-' }
+      ],
+      scenePage: { pageNum: 1, pageSize: 10, total: 1 },
+      sceneDialogVisible: false,
+      editingScene: null,
+      sceneForm: {
+        name: '',
+        industry: [],
+        businessScenario: '',
+        decisionLevel: '',
+        ruleDetail: '',
+        conditions: [],
+        conditionLogics: []
+      },
+      industryTreeData: [
+        {
+          code: 'IND001',
+          name: 'ICT',
+          level: 0,
+          children: [
+            { code: 'IND001_1', name: '运营商', level: 1 },
+            { code: 'IND001_2', name: '企业', level: 1 }
+          ]
+        },
+        {
+          code: 'IND002',
+          name: '消费者',
+          level: 0,
+          children: [
+            { code: 'IND002_1', name: '手机', level: 1 },
+            { code: 'IND002_2', name: 'PC', level: 1 }
+          ]
+        },
+        { code: 'IND003', name: '云计算', level: 0 }
+      ],
+      businessScenarioOptions: [
+        { code: 'BS001', name: '设备销售' },
+        { code: 'BS002', name: '软件销售' },
+        { code: 'BS003', name: '服务销售' },
+        { code: 'BS004', name: '物料采购' }
+      ],
+      decisionLevelOptions: [
+        { code: 'ORGANIZATION', name: '机关' },
+        { code: 'REGIONAL_DEPT', name: '地区部' },
+        { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+        { code: 'OFFICE', name: '办事处' }
+      ],
+      fieldOptions: [
+        { code: 'amount', name: '金额' },
+        { code: 'quantity', name: '数量' },
+        { code: 'customer_level', name: '客户等级' },
+        { code: 'product_type', name: '产品类型' }
+      ]
     }
-    return null
+  },
+  computed: {
+    yearOptions() {
+      const years = []
+      for (let i = new Date().getFullYear(); i >= new Date().getFullYear() - 10; i--) years.push(i)
+      return years
+    },
+    canSave() {
+      return this.pageStatus === 'DRAFT'
+    },
+    canPublish() {
+      return this.pageStatus === 'DRAFT'
+    },
+    canSaveAndPublish() {
+      return this.pageStatus === 'DRAFT'
+    },
+    canDelete() {
+      return this.pageStatus === 'DRAFT'
+    }
+  },
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside)
+  },
+  methods: {
+    toggleDropdown(name) {
+      this.activeDropdown = this.activeDropdown === name ? '' : name
+    },
+    toggleMultiSelect(field, value) {
+      const i = this.formData[field].indexOf(value)
+      if (i > -1) this.formData[field].splice(i, 1)
+      else this.formData[field].push(value)
+    },
+    removeFormItem(field, value) {
+      const i = this.formData[field].indexOf(value)
+      if (i > -1) this.formData[field].splice(i, 1)
+    },
+    selectYear(year) {
+      this.formData.publishYear = year
+      this.activeDropdown = ''
+    },
+    getOptionLabel(code, options) {
+      const item = options.find(o => o.code === code)
+      return item ? item.name : code
+    },
+    getOrgName(code) {
+      const find = (nodes) => {
+        for (const n of nodes) {
+          if (n.code === code) return n.name
+          if (n.children) { const f = find(n.children); if (f) return f }
+        }
+        return null
+      }
+      return find(this.orgTreeData) || code
+    },
+    toggleOrgNode(node) {
+      const toggle = (n, check) => {
+        const i = this.formData.authPublishOrg.indexOf(n.code)
+        if (check && i === -1) this.formData.authPublishOrg.push(n.code)
+        else if (!check && i > -1) this.formData.authPublishOrg.splice(i, 1)
+        if (n.children) n.children.forEach(c => toggle(c, check))
+      }
+      toggle(node, !this.formData.authPublishOrg.includes(node.code))
+    },
+    handleAttachmentSelectAll() {
+      if (this.attachmentSelectAll) this.selectedAttachments = this.attachmentData.map(r => r.id)
+      else this.selectedAttachments = []
+    },
+    handleUpload() { this.showMessage('上传功能待实现', 'info') },
+    handleDownloadAttachment() {
+      if (this.selectedAttachments.length === 0) { this.showMessage('请先选择要下载的附件', 'warning'); return }
+      this.showMessage('批量下载功能待实现', 'info')
+    },
+    handleDeleteAttachment() {
+      if (this.selectedAttachments.length === 0) { this.showMessage('请先选择要删除的附件', 'warning'); return }
+      this.showConfirm(`确定要删除选中的 ${this.selectedAttachments.length} 个附件吗？`).then(ok => {
+        if (ok) this.showMessage('删除成功', 'success')
+      })
+    },
+    handleDeleteAttachmentRow(row) {
+      this.showConfirm('确定要删除该附件吗？').then(ok => {
+        if (ok) this.showMessage('删除成功', 'success')
+      })
+    },
+    handleDownloadRow(row) { this.showMessage(`下载文件: ${row.fileName}`, 'info') },
+    handleEncryptRow(row) { this.showMessage(`加密文件: ${row.fileName}`, 'info') },
+    handleSceneSelectAll() {
+      if (this.sceneSelectAll) this.selectedScenes = this.sceneData.map(r => r.id)
+      else this.selectedScenes = []
+    },
+    handleDeleteScene() {
+      if (this.selectedScenes.length === 0) { this.showMessage('请先选择要删除的场景', 'warning'); return }
+      this.showConfirm(`确定要删除选中的 ${this.selectedScenes.length} 个场景吗？`).then(ok => {
+        if (ok) this.showMessage('删除成功', 'success')
+      })
+    },
+    handleDeleteSceneRow(row) {
+      this.showConfirm('确定要删除该场景吗？').then(ok => {
+        if (ok) this.showMessage('删除成功', 'success')
+      })
+    },
+    openSceneDialog(scene = null) {
+      this.editingScene = scene
+      if (scene) {
+        this.sceneForm.name = scene.sceneName
+        this.sceneForm.industry = scene.industry || []
+        this.sceneForm.businessScenario = scene.businessScenarioCode || ''
+        this.sceneForm.decisionLevel = scene.decisionLevelCode || ''
+        this.sceneForm.ruleDetail = scene.ruleDetail || ''
+        this.sceneForm.conditions = scene.conditions || []
+        this.sceneForm.conditionLogics = scene.conditionLogics || []
+      } else {
+        this.sceneForm.name = ''
+        this.sceneForm.industry = []
+        this.sceneForm.businessScenario = ''
+        this.sceneForm.decisionLevel = ''
+        this.sceneForm.ruleDetail = ''
+        this.sceneForm.conditions = []
+        this.sceneForm.conditionLogics = []
+      }
+      this.sceneDialogVisible = true
+    },
+    closeSceneDialog() {
+      this.sceneDialogVisible = false
+      this.editingScene = null
+    },
+    saveScene() {
+      if (!this.sceneForm.name) { this.showMessage('请输入场景名称', 'warning'); return }
+      if (this.sceneForm.industry.length === 0) { this.showMessage('请选择产业', 'warning'); return }
+      if (!this.sceneForm.businessScenario) { this.showMessage('请选择业务场景', 'warning'); return }
+      if (!this.sceneForm.decisionLevel) { this.showMessage('请选择决策层级', 'warning'); return }
+      if (!this.sceneForm.ruleDetail) { this.showMessage('请输入具体规则', 'warning'); return }
+
+      this.showMessage(this.editingScene ? '编辑成功' : '添加成功', 'success')
+      this.closeSceneDialog()
+    },
+    getIndustryName(code) {
+      const find = (nodes) => {
+        for (const n of nodes) {
+          if (n.code === code) return n.name
+          if (n.children) { const f = find(n.children); if (f) return f }
+        }
+        return null
+      }
+      return find(this.industryTreeData) || code
+    },
+    toggleIndustryNode(node) {
+      const toggle = (n, check) => {
+        const i = this.sceneForm.industry.indexOf(n.code)
+        if (check && i === -1) this.sceneForm.industry.push(n.code)
+        else if (!check && i > -1) this.sceneForm.industry.splice(i, 1)
+        if (n.children) n.children.forEach(c => toggle(c, check))
+      }
+      toggle(node, !this.sceneForm.industry.includes(node.code))
+    },
+    removeSceneFormItem(field, value) {
+      const i = this.sceneForm[field].indexOf(value)
+      if (i > -1) this.sceneForm[field].splice(i, 1)
+    },
+    selectBusiness(code) {
+      this.sceneForm.businessScenario = code
+      this.activeDropdown = ''
+    },
+    selectDecisionLevel(code) {
+      this.sceneForm.decisionLevel = code
+      this.activeDropdown = ''
+    },
+    getBusinessLabel(code) {
+      const item = this.businessScenarioOptions.find(o => o.code === code)
+      return item ? item.name : code
+    },
+    getDecisionLevelLabel(code) {
+      const item = this.decisionLevelOptions.find(o => o.code === code)
+      return item ? item.name : code
+    },
+    addCondition() {
+      this.sceneForm.conditions.push({
+        type: 'condition',
+        field: '',
+        operator: 'EQ',
+        compareType: 'NUMBER',
+        compareField: '',
+        compareValue: '',
+        unit: '万'
+      })
+    },
+    removeCondition(index) {
+      this.sceneForm.conditions.splice(index, 1)
+      if (this.sceneForm.conditionLogics && this.sceneForm.conditionLogics[index - 1]) {
+        this.sceneForm.conditionLogics.splice(index - 1, 1)
+      }
+    },
+    updateCondition(index, data) {
+      this.$set(this.sceneForm.conditions, index, { ...this.sceneForm.conditions[index], ...data })
+    },
+    toggleConditionLogic(index) {
+      if (!this.sceneForm.conditionLogics) this.$set(this.sceneForm, 'conditionLogics', [])
+      if (!this.sceneForm.conditionLogics[index - 1]) this.$set(this.sceneForm.conditionLogics, index - 1, 'AND')
+      this.sceneForm.conditionLogics[index - 1] = this.sceneForm.conditionLogics[index - 1] === 'AND' ? 'OR' : 'AND'
+    },
+    addConditionGroup() {
+      this.sceneForm.conditions.push({
+        type: 'group',
+        logic: 'AND',
+        conditions: [],
+        conditionLogics: []
+      })
+    },
+    removeConditionGroup(index) {
+      this.sceneForm.conditions.splice(index, 1)
+    },
+    addGroupCondition(group) {
+      if (!group.conditions) this.$set(group, 'conditions', [])
+      group.conditions.push({
+        type: 'condition',
+        field: '',
+        operator: 'EQ',
+        compareType: 'NUMBER',
+        compareField: '',
+        compareValue: '',
+        unit: '万'
+      })
+    },
+    addGroupSubGroup(group) {
+      if (!group.conditions) this.$set(group, 'conditions', [])
+      group.conditions.push({
+        type: 'group',
+        logic: 'AND',
+        conditions: [],
+        conditionLogics: []
+      })
+    },
+    removeGroupCondition(group, index) {
+      group.conditions.splice(index, 1)
+      if (group.conditionLogics && group.conditionLogics[index - 1]) {
+        group.conditionLogics.splice(index - 1, 1)
+      }
+    },
+    updateGroupCondition(group, index, data) {
+      this.$set(group.conditions, index, { ...group.conditions[index], ...data })
+    },
+    toggleGroupConditionLogic(group, index) {
+      if (!group.conditionLogics) this.$set(group, 'conditionLogics', [])
+      if (!group.conditionLogics[index - 1]) this.$set(group.conditionLogics, index - 1, 'AND')
+      group.conditionLogics[index - 1] = group.conditionLogics[index - 1] === 'AND' ? 'OR' : 'AND'
+    },
+    handleSave() { this.showMessage('保存成功', 'success') },
+    handleSaveAndPublish() { this.showMessage('保存并发布成功', 'success'); this.pageStatus = 'PUBLISHED' },
+    handlePublish() {
+      this.showConfirm('确定要发布该授权书吗？').then(ok => {
+        if (ok) { this.showMessage('发布成功', 'success'); this.pageStatus = 'PUBLISHED' }
+      })
+    },
+    handleCancel() { this.showMessage('返回列表页', 'info') },
+    handleDeleteAuthLetter() {
+      this.showConfirm('确定要删除该授权书吗？').then(ok => {
+        if (ok) this.showMessage('删除成功', 'success')
+      })
+    },
+    showMessage(text, type = 'info') {
+      this.message.text = text
+      this.message.type = type
+      this.message.show = true
+      setTimeout(() => { this.message.show = false }, 3000)
+    },
+    showConfirm(text) {
+      return new Promise(resolve => {
+        this.confirmDialog.text = text
+        this.confirmDialog.show = true
+        this.confirmDialog.onConfirm = () => { this.confirmDialog.show = false; resolve(true) }
+        this.confirmDialog.onCancel = () => { this.confirmDialog.show = false; resolve(false) }
+      })
+    },
+    handleClickOutside(e) {
+      if (!e.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
+        this.activeDropdown = ''
+      }
+    }
   }
-  return find(industryTreeData.value) || code
 }
-
-function toggleIndustryNode(node) {
-  const toggle = (n, check) => {
-    const i = sceneForm.industry.indexOf(n.code)
-    if (check && i === -1) sceneForm.industry.push(n.code)
-    else if (!check && i > -1) sceneForm.industry.splice(i, 1)
-    if (n.children) n.children.forEach(c => toggle(c, check))
-  }
-  toggle(node, !sceneForm.industry.includes(node.code))
-}
-
-function removeSceneFormItem(field, value) {
-  const i = sceneForm[field].indexOf(value)
-  if (i > -1) sceneForm[field].splice(i, 1)
-}
-
-function selectBusiness(code) {
-  sceneForm.businessScenario = code
-  activeDropdown.value = ''
-}
-
-function selectDecisionLevel(code) {
-  sceneForm.decisionLevel = code
-  activeDropdown.value = ''
-}
-
-function getBusinessLabel(code) {
-  const item = businessScenarioOptions.value.find(o => o.code === code)
-  return item ? item.name : code
-}
-
-function getDecisionLevelLabel(code) {
-  const item = decisionLevelOptions.value.find(o => o.code === code)
-  return item ? item.name : code
-}
-
-// ========== 条件配置 ==========
-function addCondition() {
-  sceneForm.conditions.push({
-    type: 'condition',
-    field: '',
-    operator: 'EQ',
-    compareType: 'NUMBER',
-    compareField: '',
-    compareValue: '',
-    unit: '万'
-  })
-}
-
-function removeCondition(index) {
-  sceneForm.conditions.splice(index, 1)
-  if (sceneForm.conditionLogics && sceneForm.conditionLogics[index - 1]) {
-    sceneForm.conditionLogics.splice(index - 1, 1)
-  }
-}
-
-function updateCondition(index, data) {
-  sceneForm.conditions[index] = { ...sceneForm.conditions[index], ...data }
-}
-
-function toggleConditionLogic(index) {
-  if (!sceneForm.conditionLogics) sceneForm.conditionLogics = []
-  if (!sceneForm.conditionLogics[index - 1]) sceneForm.conditionLogics[index - 1] = 'AND'
-  sceneForm.conditionLogics[index - 1] = sceneForm.conditionLogics[index - 1] === 'AND' ? 'OR' : 'AND'
-}
-
-function addConditionGroup() {
-  sceneForm.conditions.push({
-    type: 'group',
-    logic: 'AND',
-    conditions: [],
-    conditionLogics: []
-  })
-}
-
-function removeConditionGroup(index) {
-  sceneForm.conditions.splice(index, 1)
-}
-
-function addGroupCondition(group) {
-  if (!group.conditions) group.conditions = []
-  group.conditions.push({
-    type: 'condition',
-    field: '',
-    operator: 'EQ',
-    compareType: 'NUMBER',
-    compareField: '',
-    compareValue: '',
-    unit: '万'
-  })
-}
-
-function addGroupSubGroup(group) {
-  if (!group.conditions) group.conditions = []
-  group.conditions.push({
-    type: 'group',
-    logic: 'AND',
-    conditions: [],
-    conditionLogics: []
-  })
-}
-
-function removeGroupCondition(group, index) {
-  group.conditions.splice(index, 1)
-  if (group.conditionLogics && group.conditionLogics[index - 1]) {
-    group.conditionLogics.splice(index - 1, 1)
-  }
-}
-
-function updateGroupCondition(group, index, data) {
-  group.conditions[index] = { ...group.conditions[index], ...data }
-}
-
-function toggleGroupConditionLogic(group, index) {
-  if (!group.conditionLogics) group.conditionLogics = []
-  if (!group.conditionLogics[index - 1]) group.conditionLogics[index - 1] = 'AND'
-  group.conditionLogics[index - 1] = group.conditionLogics[index - 1] === 'AND' ? 'OR' : 'AND'
-}
-
-// ========== 底部按钮 ==========
-function handleSave() { showMessage('保存成功', 'success') }
-function handleSaveAndPublish() { showMessage('保存并发布成功', 'success'); pageStatus.value = 'PUBLISHED' }
-function handlePublish() {
-  showConfirm('确定要发布该授权书吗？').then(ok => {
-    if (ok) { showMessage('发布成功', 'success'); pageStatus.value = 'PUBLISHED' }
-  })
-}
-function handleCancel() { showMessage('返回列表页', 'info') }
-function handleDeleteAuthLetter() {
-  showConfirm('确定要删除该授权书吗？').then(ok => {
-    if (ok) showMessage('删除成功', 'success')
-  })
-}
-
-// ========== 消息和确认框 ==========
-function showMessage(text, type = 'info') {
-  message.text = text
-  message.type = type
-  message.show = true
-  setTimeout(() => { message.show = false }, 3000)
-}
-
-function showConfirm(text) {
-  return new Promise(resolve => {
-    confirmDialog.text = text
-    confirmDialog.show = true
-    confirmDialog.onConfirm = () => { confirmDialog.show = false; resolve(true) }
-    confirmDialog.onCancel = () => { confirmDialog.show = false; resolve(false) }
-  })
-}
-
-// ========== 生命周期 ==========
-function handleClickOutside(e) {
-  if (!e.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
-    activeDropdown.value = ''
-  }
-}
-
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <style scoped>

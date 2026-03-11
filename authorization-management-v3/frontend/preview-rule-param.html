@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>规则参数配置页 - 静态预览</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f5f7fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .rule-param-page {
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    /* 查询卡片 */
+    .query-card {
+      background: #fff;
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .query-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .form-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .form-label {
+      width: 80px;
+      text-align: right;
+      color: #666;
+      flex-shrink: 0;
+      margin-right: 12px;
+    }
+
+    .form-input {
+      flex: 1;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: #409eff;
+    }
+
+    .query-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+
+    /* 下拉选择 */
+    .select-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    .select-trigger {
+      height: 32px;
+      padding: 0 30px 0 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .arrow {
+      position: absolute;
+      right: 10px;
+      font-size: 12px;
+      color: #c0c4cc;
+    }
+
+    .select-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .select-wrapper:hover .select-dropdown {
+      display: block;
+    }
+
+    .select-option {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .select-option:hover {
+      background: #f5f7fa;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid #dcdfe6;
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn-primary {
+      background: #409eff;
+      border-color: #409eff;
+      color: #fff;
+    }
+
+    .btn-success {
+      background: #67c23a;
+      border-color: #67c23a;
+      color: #fff;
+    }
+
+    .btn-warning {
+      background: #e6a23c;
+      border-color: #e6a23c;
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: #f56c6c;
+      border-color: #f56c6c;
+      color: #fff;
+    }
+
+    .btn-default {
+      background: #fff;
+      color: #191919;
+      border-color: #dcdfe6;
+    }
+
+    /* 功能按钮区 */
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    /* 表格 */
+    .table-card {
+      background: #fff;
+      border-radius: 4px;
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px 8px;
+      text-align: left;
+      border-bottom: 1px solid #ebeef5;
+    }
+
+    .data-table th {
+      background: #f5f7fa;
+      font-weight: 600;
+      color: #909399;
+    }
+
+    .data-table tbody tr:hover {
+      background: #f5f7fa;
+    }
+
+    .col-checkbox {
+      width: 50px;
+      text-align: center;
+    }
+
+    .col-index {
+      width: 60px;
+      text-align: center;
+    }
+
+    .col-action {
+      width: 60px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .col-status {
+      width: 80px;
+      text-align: center;
+    }
+
+    .col-name {
+      min-width: 120px;
+    }
+
+    .col-name-en {
+      min-width: 140px;
+    }
+
+    .col-user {
+      width: 100px;
+      text-align: center;
+    }
+
+    .col-time {
+      width: 160px;
+      text-align: center;
+    }
+
+    .icon-btn {
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .icon-btn:hover {
+      opacity: 0.7;
+    }
+
+    .status-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .status-active {
+      background: #f0f9eb;
+      color: #67c23a;
+    }
+
+    .status-inactive {
+      background: #f4f4f5;
+      color: #909399;
+    }
+
+    /* 分页 */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #606266;
+    }
+
+    .pagination-size {
+      height: 28px;
+      padding: 0 8px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+    }
+
+    .pagination-btn {
+      padding: 4px 12px;
+      border: 1px solid #dcdfe6;
+      background: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .pagination-btn:disabled {
+      color: #c0c4cc;
+      cursor: not-allowed;
+    }
+
+    .pagination-jump input {
+      width: 50px;
+      height: 28px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      text-align: center;
+      margin: 0 4px;
+    }
+
+    /* 弹窗 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-dialog {
+      background: #fff;
+      border-radius: 8px;
+      min-width: 600px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .modal-close {
+      cursor: pointer;
+      font-size: 20px;
+      color: #909399;
+    }
+
+    .modal-close:hover {
+      color: #409eff;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* 弹窗表单 */
+    .form-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .dialog-form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 40px;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .dialog-form-row:last-child {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .dialog-form-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .dialog-form-label {
+      width: 80px;
+      text-align: right;
+      color: #666;
+      flex-shrink: 0;
+      margin-right: 12px;
+    }
+
+    .dialog-form-label.required::before {
+      content: '*';
+      color: #f56c6c;
+      margin-right: 4px;
+    }
+
+    .business-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      background: #fafafa;
+      border-radius: 4px;
+      border: 1px solid #e4e7ed;
+    }
+
+    .add-btn-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .add-btn,
+    .remove-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .add-btn {
+      background: #409eff;
+      color: #fff;
+    }
+
+    .add-btn:hover {
+      background: #66b1ff;
+    }
+
+    .remove-btn {
+      background: #f56c6c;
+      color: #fff;
+    }
+
+    .remove-btn:hover {
+      background: #f78989;
+    }
+
+    /* 示例弹窗 */
+    .example-modal {
+      margin-top: 30px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="rule-param-page">
+    <!-- 查询条件区 -->
+    <div class="query-card">
+      <div class="query-form">
+        <div class="form-row">
+          <div class="form-item">
+            <label class="form-label">名称</label>
+            <input type="text" class="form-input" placeholder="请输入名称" value="" />
+          </div>
+          <div class="form-item">
+            <label class="form-label">名称英文</label>
+            <input type="text" class="form-input" placeholder="请输入名称英文" value="" />
+          </div>
+          <div class="form-item">
+            <label class="form-label">状态</label>
+            <div class="select-wrapper">
+              <div class="select-trigger">
+                <span>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="select-dropdown">
+                <div class="select-option">全部</div>
+                <div class="select-option">生效</div>
+                <div class="select-option">失效</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="query-buttons">
+        <button class="btn btn-primary">查询</button>
+      </div>
+    </div>
+
+    <!-- 功能按钮区 -->
+    <div class="action-buttons">
+      <button class="btn btn-primary">新建</button>
+      <button class="btn btn-success">生效</button>
+      <button class="btn btn-warning">失效</button>
+    </div>
+
+    <!-- 数据表格区 -->
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-checkbox"><input type="checkbox" /></th>
+            <th class="col-index">序号</th>
+            <th class="col-action">操作</th>
+            <th class="col-name">名称</th>
+            <th class="col-name-en">名称英文</th>
+            <th class="col-status">状态</th>
+            <th class="col-user">创建人</th>
+            <th class="col-time">创建时间</th>
+            <th class="col-user">更新人</th>
+            <th class="col-time">更新时间</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-checkbox"><input type="checkbox" /></td>
+            <td class="col-index">1</td>
+            <td class="col-action">
+              <span class="icon-btn" title="编辑">✏️</span>
+            </td>
+            <td class="col-name">合同金额</td>
+            <td class="col-name-en">contractAmount</td>
+            <td class="col-status"><span class="status-tag status-active">生效</span></td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-10 10:30:00</td>
+            <td class="col-user">-</td>
+            <td class="col-time">-</td>
+          </tr>
+          <tr>
+            <td class="col-checkbox"><input type="checkbox" /></td>
+            <td class="col-index">2</td>
+            <td class="col-action">
+              <span class="icon-btn" title="编辑">✏️</span>
+            </td>
+            <td class="col-name">订单数量</td>
+            <td class="col-name-en">orderQuantity</td>
+            <td class="col-status"><span class="status-tag status-active">生效</span></td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-10 11:00:00</td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-11 09:00:00</td>
+          </tr>
+          <tr>
+            <td class="col-checkbox"><input type="checkbox" /></td>
+            <td class="col-index">3</td>
+            <td class="col-action">
+              <span class="icon-btn" title="编辑">✏️</span>
+            </td>
+            <td class="col-name">客户等级</td>
+            <td class="col-name-en">customerLevel</td>
+            <td class="col-status"><span class="status-tag status-inactive">失效</span></td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-09 14:20:00</td>
+            <td class="col-user">-</td>
+            <td class="col-time">-</td>
+          </tr>
+          <tr>
+            <td class="col-checkbox"><input type="checkbox" /></td>
+            <td class="col-index">4</td>
+            <td class="col-action">
+              <span class="icon-btn" title="编辑">✏️</span>
+            </td>
+            <td class="col-name">产品类型</td>
+            <td class="col-name-en">productType</td>
+            <td class="col-status"><span class="status-tag status-active">生效</span></td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-08 16:45:00</td>
+            <td class="col-user">-</td>
+            <td class="col-time">-</td>
+          </tr>
+          <tr>
+            <td class="col-checkbox"><input type="checkbox" /></td>
+            <td class="col-index">5</td>
+            <td class="col-action">
+              <span class="icon-btn" title="编辑">✏️</span>
+            </td>
+            <td class="col-name">审批金额</td>
+            <td class="col-name-en">approvalAmount</td>
+            <td class="col-status"><span class="status-tag status-active">生效</span></td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-07 09:15:00</td>
+            <td class="col-user">admin</td>
+            <td class="col-time">2024-03-10 10:00:00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 分页组件 -->
+      <div class="pagination">
+        <span class="pagination-total">共 20 条</span>
+        <select class="pagination-size">
+          <option>10条/页</option>
+          <option>20条/页</option>
+          <option>50条/页</option>
+          <option>100条/页</option>
+        </select>
+        <button class="pagination-btn" disabled>上一页</button>
+        <span class="pagination-page">1 / 2</span>
+        <button class="pagination-btn">下一页</button>
+        <span class="pagination-jump">跳至<input type="number" />页</span>
+      </div>
+    </div>
+
+    <!-- 弹窗示例 -->
+    <div class="example-modal">
+      <div class="section-title">新建/编辑弹窗示例</div>
+      <div class="modal-overlay" style="position: relative; background: transparent;">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <span class="modal-title">新建规则参数</span>
+            <span class="modal-close">×</span>
+          </div>
+          <div class="modal-body">
+            <div class="form-content">
+              <!-- 第一行：名称、名称英文 -->
+              <div class="dialog-form-row">
+                <div class="dialog-form-item">
+                  <label class="dialog-form-label required">名称</label>
+                  <input type="text" class="form-input" placeholder="请输入名称" />
+                </div>
+                <div class="dialog-form-item">
+                  <label class="dialog-form-label required">名称英文</label>
+                  <input type="text" class="form-input" placeholder="请输入名称英文" />
+                </div>
+              </div>
+
+              <!-- 业务对象和取值逻辑 -->
+              <div class="business-rows">
+                <div class="dialog-form-row">
+                  <div class="dialog-form-item">
+                    <label class="dialog-form-label required">业务对象</label>
+                    <div class="select-wrapper">
+                      <div class="select-trigger">
+                        <span>合同</span>
+                        <span class="arrow">▼</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="dialog-form-item">
+                    <label class="dialog-form-label required">取值逻辑</label>
+                    <input type="text" class="form-input" placeholder="请输入取值逻辑" value="合同.金额" />
+                  </div>
+                  <div class="add-btn-wrapper">
+                    <span class="add-btn">+</span>
+                  </div>
+                </div>
+
+                <div class="dialog-form-row">
+                  <div class="dialog-form-item">
+                    <label class="dialog-form-label">业务对象</label>
+                    <div class="select-wrapper">
+                      <div class="select-trigger">
+                        <span>订单</span>
+                        <span class="arrow">▼</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="dialog-form-item">
+                    <label class="dialog-form-label">取值逻辑</label>
+                    <input type="text" class="form-input" placeholder="请输入取值逻辑" value="订单.金额" />
+                  </div>
+                  <div class="add-btn-wrapper">
+                    <span class="add-btn">+</span>
+                    <span class="remove-btn">-</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 第三行：是否生效、数据类型 -->
+              <div class="dialog-form-row">
+                <div class="dialog-form-item">
+                  <label class="dialog-form-label required">是否生效</label>
+                  <div class="select-wrapper">
+                    <div class="select-trigger">
+                      <span>是</span>
+                      <span class="arrow">▼</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="dialog-form-item">
+                  <label class="dialog-form-label required">数据类型</label>
+                  <div class="select-wrapper">
+                    <div class="select-trigger">
+                      <span>数值</span>
+                      <span class="arrow">▼</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-default">取消</button>
+            <button class="btn btn-primary">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -220,28 +220,33 @@
   </div>
 </template>
 
-<script setup>
-import { ref, reactive, computed, onMounted, onUnmounted, defineComponent, h } from 'vue'
-
+<script>
 // ========== 树节点组件 ==========
-const TreeNode = defineComponent({
+const TreeNode = {
   name: 'TreeNode',
   props: {
     node: Object,
     selectedCodes: Array
   },
-  emits: ['toggle'],
-  setup(props, { emit }) {
-    const expanded = ref(false)
-    const hasChildren = computed(() => props.node.children && props.node.children.length > 0)
-    const isChecked = computed(() => props.selectedCodes.includes(props.node.code))
-    const isIndeterminate = computed(() => {
-      if (!hasChildren.value) return false
+  data() {
+    return {
+      expanded: false
+    }
+  },
+  computed: {
+    hasChildren() {
+      return this.node.children && this.node.children.length > 0
+    },
+    isChecked() {
+      return this.selectedCodes.includes(this.node.code)
+    },
+    isIndeterminate() {
+      if (!this.hasChildren) return false
       const checkChildren = (children) => {
         let hasChecked = false
         let hasUnchecked = false
         for (const child of children) {
-          if (props.selectedCodes.includes(child.code)) {
+          if (this.selectedCodes.includes(child.code)) {
             hasChecked = true
           } else {
             hasUnchecked = true
@@ -254,391 +259,353 @@ const TreeNode = defineComponent({
         }
         return { hasChecked, hasUnchecked }
       }
-      const result = checkChildren(props.node.children)
+      const result = checkChildren(this.node.children)
       return result.hasChecked && result.hasUnchecked
-    })
-
-    const toggleCheck = () => {
-      emit('toggle', props.node)
     }
-
-    const toggleExpand = () => {
-      expanded.value = !expanded.value
+  },
+  methods: {
+    toggleCheck() {
+      this.$emit('toggle', this.node)
+    },
+    toggleExpand() {
+      this.expanded = !this.expanded
     }
+  },
+  template: `
+    <div class="tree-node">
+      <div class="tree-node-content" :style="{ paddingLeft: (node.level || 0) * 20 + 'px' }">
+        <span v-if="hasChildren" class="tree-expand-icon" :class="{ expanded: expanded }" @click="toggleExpand">▶</span>
+        <span v-else class="tree-expand-placeholder"></span>
+        <span class="tree-checkbox" :class="{ checked: isChecked, indeterminate: isIndeterminate }" @click="toggleCheck"></span>
+        <span class="tree-node-label" @click="toggleCheck">{{ node.name }}</span>
+      </div>
+      <div v-if="hasChildren && expanded" class="tree-children">
+        <tree-node
+          v-for="child in node.children"
+          :key="child.code"
+          :node="{ ...child, level: (node.level || 0) + 1 }"
+          :selected-codes="selectedCodes"
+          @toggle="$emit('toggle', $event)"
+        />
+      </div>
+    </div>
+  `
+}
 
-    return () => h('div', { class: 'tree-node' }, [
-      h('div', {
-        class: 'tree-node-content',
-        style: { paddingLeft: (props.node.level || 0) * 20 + 'px' }
-      }, [
-        hasChildren.value ? h('span', {
-          class: 'tree-expand-icon' + (expanded.value ? ' expanded' : ''),
-          onClick: toggleExpand
-        }, '▶') : h('span', { class: 'tree-expand-placeholder' }),
-        h('span', {
-          class: 'tree-checkbox' + (isChecked.value ? ' checked' : '') + (isIndeterminate.value ? ' indeterminate' : ''),
-          onClick: toggleCheck
-        }),
-        h('span', { class: 'tree-node-label', onClick: toggleCheck }, props.node.name)
-      ]),
-      hasChildren.value && expanded.value ? h('div', { class: 'tree-children' },
-        props.node.children.map(child =>
-          h(TreeNode, {
-            key: child.code,
-            node: { ...child, level: (props.node.level || 0) + 1 },
-            selectedCodes: props.selectedCodes,
-            onToggle: (n) => emit('toggle', n)
-          })
-        )
-      ) : null
-    ])
-  }
-})
-
-// ========== 页面逻辑 ==========
-const activeDropdown = ref('')
-const selectAll = ref(false)
-const selectedRows = ref([])
-const jumpPage = ref(1)
-
-const message = reactive({
-  show: false,
-  type: 'info',
-  text: ''
-})
-
-const confirmDialog = reactive({
-  show: false,
-  text: '',
-  onConfirm: () => {},
-  onCancel: () => {}
-})
-
-const queryParams = reactive({
-  name: '',
-  authTargetLevel: [],
-  applicableRegion: [],
-  authPublishLevel: [],
-  authPublishOrg: [],
-  publishYear: null,
-  status: ''
-})
-
-const pagination = reactive({
-  pageNum: 1,
-  pageSize: 10,
-  total: 30
-})
-
-const totalPages = computed(() => Math.ceil(pagination.total / pagination.pageSize))
-
-// 下拉选项数据
-const authTargetLevelOptions = ref([
-  { code: 'ORGANIZATION', name: '机关' },
-  { code: 'REGIONAL_DEPT', name: '地区部' },
-  { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
-  { code: 'OFFICE', name: '办事处' }
-])
-
-const applicableRegionOptions = ref([
-  { code: 'EAST', name: '华东' },
-  { code: 'NORTH', name: '华北' },
-  { code: 'SOUTH', name: '华南' },
-  { code: 'WEST', name: '西部' },
-  { code: 'CENTRAL', name: '华中' }
-])
-
-const authPublishLevelOptions = ref([...authTargetLevelOptions.value])
-
-const statusOptions = ref([
-  { value: 'DRAFT', label: '草稿' },
-  { value: 'PUBLISHED', label: '已发布' },
-  { value: 'EXPIRED', label: '已失效' }
-])
-
-const yearOptions = computed(() => {
-  const years = []
-  const currentYear = new Date().getFullYear()
-  for (let i = currentYear; i >= currentYear - 10; i--) {
-    years.push(i)
-  }
-  return years
-})
-
-// 组织树数据
-const orgTreeData = ref([
-  {
-    code: 'ORG001',
-    name: '总部',
-    level: 0,
-    children: [
-      {
-        code: 'ORG002',
-        name: '华东区',
-        level: 1,
-        children: [
-          { code: 'ORG003', name: '上海办事处', level: 2 },
-          { code: 'ORG004', name: '杭州办事处', level: 2 }
-        ]
+export default {
+  name: 'AuthLetterList',
+  components: {
+    TreeNode
+  },
+  data() {
+    return {
+      activeDropdown: '',
+      selectAll: false,
+      selectedRows: [],
+      jumpPage: 1,
+      message: {
+        show: false,
+        type: 'info',
+        text: ''
       },
-      {
-        code: 'ORG005',
-        name: '华北区',
-        level: 1,
-        children: [
-          { code: 'ORG006', name: '北京办事处', level: 2 },
-          { code: 'ORG007', name: '天津办事处', level: 2 }
-        ]
-      }
-    ]
-  }
-])
-
-// 表格数据
-const tableData = ref([
-  {
-    id: 1,
-    name: '2024年度销售授权书',
-    status: 'DRAFT',
-    statusText: '草稿',
-    authTargetLevelText: ['机关', '地区部'],
-    applicableRegionText: ['华东', '华北'],
-    authPublishLevelText: ['机关'],
-    authPublishOrgText: ['总部'],
-    publishYear: 2024,
-    createdBy: 'admin',
-    createdAt: '2024-03-10 10:30:00'
+      confirmDialog: {
+        show: false,
+        text: '',
+        onConfirm: () => {},
+        onCancel: () => {}
+      },
+      queryParams: {
+        name: '',
+        authTargetLevel: [],
+        applicableRegion: [],
+        authPublishLevel: [],
+        authPublishOrg: [],
+        publishYear: null,
+        status: ''
+      },
+      pagination: {
+        pageNum: 1,
+        pageSize: 10,
+        total: 30
+      },
+      authTargetLevelOptions: [
+        { code: 'ORGANIZATION', name: '机关' },
+        { code: 'REGIONAL_DEPT', name: '地区部' },
+        { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+        { code: 'OFFICE', name: '办事处' }
+      ],
+      applicableRegionOptions: [
+        { code: 'EAST', name: '华东' },
+        { code: 'NORTH', name: '华北' },
+        { code: 'SOUTH', name: '华南' },
+        { code: 'WEST', name: '西部' },
+        { code: 'CENTRAL', name: '华中' }
+      ],
+      authPublishLevelOptions: [
+        { code: 'ORGANIZATION', name: '机关' },
+        { code: 'REGIONAL_DEPT', name: '地区部' },
+        { code: 'REPRESENTATIVE_OFFICE', name: '代表处' },
+        { code: 'OFFICE', name: '办事处' }
+      ],
+      statusOptions: [
+        { value: 'DRAFT', label: '草稿' },
+        { value: 'PUBLISHED', label: '已发布' },
+        { value: 'EXPIRED', label: '已失效' }
+      ],
+      orgTreeData: [
+        {
+          code: 'ORG001',
+          name: '总部',
+          level: 0,
+          children: [
+            {
+              code: 'ORG002',
+              name: '华东区',
+              level: 1,
+              children: [
+                { code: 'ORG003', name: '上海办事处', level: 2 },
+                { code: 'ORG004', name: '杭州办事处', level: 2 }
+              ]
+            },
+            {
+              code: 'ORG005',
+              name: '华北区',
+              level: 1,
+              children: [
+                { code: 'ORG006', name: '北京办事处', level: 2 },
+                { code: 'ORG007', name: '天津办事处', level: 2 }
+              ]
+            }
+          ]
+        }
+      ],
+      tableData: [
+        {
+          id: 1,
+          name: '2024年度销售授权书',
+          status: 'DRAFT',
+          statusText: '草稿',
+          authTargetLevelText: ['机关', '地区部'],
+          applicableRegionText: ['华东', '华北'],
+          authPublishLevelText: ['机关'],
+          authPublishOrgText: ['总部'],
+          publishYear: 2024,
+          createdBy: 'admin',
+          createdAt: '2024-03-10 10:30:00'
+        },
+        {
+          id: 2,
+          name: '2023年度采购授权书',
+          status: 'PUBLISHED',
+          statusText: '已发布',
+          authTargetLevelText: ['代表处'],
+          applicableRegionText: ['华南'],
+          authPublishLevelText: ['地区部'],
+          authPublishOrgText: ['华南区'],
+          publishYear: 2023,
+          createdBy: 'admin',
+          createdAt: '2023-12-15 14:20:00'
+        },
+        {
+          id: 3,
+          name: '2022年度财务授权书',
+          status: 'EXPIRED',
+          statusText: '已失效',
+          authTargetLevelText: ['办事处'],
+          applicableRegionText: ['西部'],
+          authPublishLevelText: ['代表处'],
+          authPublishOrgText: ['西部区'],
+          publishYear: 2022,
+          createdBy: 'admin',
+          createdAt: '2022-06-20 09:15:00'
+        }
+      ]
+    }
   },
-  {
-    id: 2,
-    name: '2023年度采购授权书',
-    status: 'PUBLISHED',
-    statusText: '已发布',
-    authTargetLevelText: ['代表处'],
-    applicableRegionText: ['华南'],
-    authPublishLevelText: ['地区部'],
-    authPublishOrgText: ['华南区'],
-    publishYear: 2023,
-    createdBy: 'admin',
-    createdAt: '2023-12-15 14:20:00'
+  computed: {
+    totalPages() {
+      return Math.ceil(this.pagination.total / this.pagination.pageSize)
+    },
+    yearOptions() {
+      const years = []
+      const currentYear = new Date().getFullYear()
+      for (let i = currentYear; i >= currentYear - 10; i--) {
+        years.push(i)
+      }
+      return years
+    }
   },
-  {
-    id: 3,
-    name: '2022年度财务授权书',
-    status: 'EXPIRED',
-    statusText: '已失效',
-    authTargetLevelText: ['办事处'],
-    applicableRegionText: ['西部'],
-    authPublishLevelText: ['代表处'],
-    authPublishOrgText: ['西部区'],
-    publishYear: 2022,
-    createdBy: 'admin',
-    createdAt: '2022-06-20 09:15:00'
-  }
-])
-
-// ========== 下拉选择相关 ==========
-function toggleSelect(name) {
-  activeDropdown.value = activeDropdown.value === name ? '' : name
-}
-
-function toggleMultiSelect(field, value) {
-  const index = queryParams[field].indexOf(value)
-  if (index > -1) {
-    queryParams[field].splice(index, 1)
-  } else {
-    queryParams[field].push(value)
-  }
-}
-
-function removeSelected(field, value) {
-  const index = queryParams[field].indexOf(value)
-  if (index > -1) {
-    queryParams[field].splice(index, 1)
-  }
-}
-
-function selectYear(year) {
-  queryParams.publishYear = year
-  activeDropdown.value = ''
-}
-
-function selectStatus(value) {
-  queryParams.status = value
-  activeDropdown.value = ''
-}
-
-function getStatusLabel(value) {
-  const item = statusOptions.value.find(s => s.value === value)
-  return item ? item.label : ''
-}
-
-function getSelectedLabels(codes, options) {
-  return codes.map(code => {
-    const item = options.find(o => o.code === code)
-    return item ? item.name : code
-  })
-}
-
-function getOrgName(code) {
-  const findNode = (nodes, targetCode) => {
-    for (const node of nodes) {
-      if (node.code === targetCode) return node.name
-      if (node.children) {
-        const found = findNode(node.children, targetCode)
-        if (found) return found
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside)
+  },
+  methods: {
+    toggleSelect(name) {
+      this.activeDropdown = this.activeDropdown === name ? '' : name
+    },
+    toggleMultiSelect(field, value) {
+      const index = this.queryParams[field].indexOf(value)
+      if (index > -1) {
+        this.queryParams[field].splice(index, 1)
+      } else {
+        this.queryParams[field].push(value)
+      }
+    },
+    removeSelected(field, value) {
+      const index = this.queryParams[field].indexOf(value)
+      if (index > -1) {
+        this.queryParams[field].splice(index, 1)
+      }
+    },
+    selectYear(year) {
+      this.queryParams.publishYear = year
+      this.activeDropdown = ''
+    },
+    selectStatus(value) {
+      this.queryParams.status = value
+      this.activeDropdown = ''
+    },
+    getStatusLabel(value) {
+      const item = this.statusOptions.find(s => s.value === value)
+      return item ? item.label : ''
+    },
+    getSelectedLabels(codes, options) {
+      return codes.map(code => {
+        const item = options.find(o => o.code === code)
+        return item ? item.name : code
+      })
+    },
+    getOrgName(code) {
+      const findNode = (nodes, targetCode) => {
+        for (const node of nodes) {
+          if (node.code === targetCode) return node.name
+          if (node.children) {
+            const found = findNode(node.children, targetCode)
+            if (found) return found
+          }
+        }
+        return null
+      }
+      return findNode(this.orgTreeData, code) || code
+    },
+    toggleTreeNode(node) {
+      const toggleNodeAndChildren = (n, shouldCheck) => {
+        const index = this.queryParams.authPublishOrg.indexOf(n.code)
+        if (shouldCheck && index === -1) {
+          this.queryParams.authPublishOrg.push(n.code)
+        } else if (!shouldCheck && index > -1) {
+          this.queryParams.authPublishOrg.splice(index, 1)
+        }
+        if (n.children) {
+          n.children.forEach(child => toggleNodeAndChildren(child, shouldCheck))
+        }
+      }
+      const isChecked = this.queryParams.authPublishOrg.includes(node.code)
+      toggleNodeAndChildren(node, !isChecked)
+    },
+    handleSelectAll() {
+      if (this.selectAll) {
+        this.selectedRows = this.tableData.map(row => row.id)
+      } else {
+        this.selectedRows = []
+      }
+    },
+    handleSizeChange() {
+      this.pagination.pageNum = 1
+    },
+    handleJumpPage() {
+      if (this.jumpPage >= 1 && this.jumpPage <= this.totalPages) {
+        this.pagination.pageNum = this.jumpPage
+      }
+    },
+    formatArrayText(arr) {
+      if (!arr || arr.length === 0) return '-'
+      return arr.join('、')
+    },
+    showMessage(text, type = 'info') {
+      this.message.text = text
+      this.message.type = type
+      this.message.show = true
+      setTimeout(() => {
+        this.message.show = false
+      }, 3000)
+    },
+    showConfirm(text) {
+      return new Promise((resolve) => {
+        this.confirmDialog.show = true
+        this.confirmDialog.text = text
+        this.confirmDialog.onConfirm = () => {
+          this.confirmDialog.show = false
+          resolve(true)
+        }
+        this.confirmDialog.onCancel = () => {
+          this.confirmDialog.show = false
+          resolve(false)
+        }
+      })
+    },
+    handleQuery() {
+      this.pagination.pageNum = 1
+      this.showMessage('查询成功', 'success')
+    },
+    handleReset() {
+      this.queryParams.name = ''
+      this.queryParams.authTargetLevel = []
+      this.queryParams.applicableRegion = []
+      this.queryParams.authPublishLevel = []
+      this.queryParams.authPublishOrg = []
+      this.queryParams.publishYear = null
+      this.queryParams.status = ''
+      this.pagination.pageNum = 1
+      this.showMessage('已重置查询条件', 'info')
+    },
+    checkSelection() {
+      if (this.selectedRows.length === 0) {
+        this.showMessage('请先选择数据', 'warning')
+        return false
+      }
+      return true
+    },
+    handleCreate() {
+      this.showMessage('新建授权书功能待实现', 'info')
+    },
+    handleUpdate() {
+      if (!this.checkSelection()) return
+      this.showMessage('更新功能待实现', 'info')
+    },
+    async handleActivate() {
+      if (!this.checkSelection()) return
+      const confirmed = await this.showConfirm(`确定要将选中的 ${this.selectedRows.length} 条数据发布生效吗？`)
+      if (confirmed) {
+        this.showMessage('操作成功', 'success')
+      }
+    },
+    async handleDeactivate() {
+      if (!this.checkSelection()) return
+      const confirmed = await this.showConfirm(`确定要将选中的 ${this.selectedRows.length} 条数据设为失效吗？`)
+      if (confirmed) {
+        this.showMessage('操作成功', 'success')
+      }
+    },
+    async handleDelete() {
+      if (!this.checkSelection()) return
+      const confirmed = await this.showConfirm(`确定要删除选中的 ${this.selectedRows.length} 条数据吗？`)
+      if (confirmed) {
+        this.showMessage('删除成功', 'success')
+      }
+    },
+    goToDetail(id) {
+      this.showMessage(`跳转到详情页: ID=${id}`, 'info')
+    },
+    handleClickOutside(event) {
+      if (!event.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
+        this.activeDropdown = ''
       }
     }
-    return null
-  }
-  return findNode(orgTreeData.value, code) || code
-}
-
-// ========== 树形选择相关 ==========
-function toggleTreeNode(node) {
-  const toggleNodeAndChildren = (n, shouldCheck) => {
-    const index = queryParams.authPublishOrg.indexOf(n.code)
-    if (shouldCheck && index === -1) {
-      queryParams.authPublishOrg.push(n.code)
-    } else if (!shouldCheck && index > -1) {
-      queryParams.authPublishOrg.splice(index, 1)
-    }
-    if (n.children) {
-      n.children.forEach(child => toggleNodeAndChildren(child, shouldCheck))
-    }
-  }
-
-  const isChecked = queryParams.authPublishOrg.includes(node.code)
-  toggleNodeAndChildren(node, !isChecked)
-}
-
-// ========== 表格相关 ==========
-function handleSelectAll() {
-  if (selectAll.value) {
-    selectedRows.value = tableData.value.map(row => row.id)
-  } else {
-    selectedRows.value = []
   }
 }
-
-function handleSizeChange() {
-  pagination.pageNum = 1
-}
-
-function handleJumpPage() {
-  if (jumpPage.value >= 1 && jumpPage.value <= totalPages.value) {
-    pagination.pageNum = jumpPage.value
-  }
-}
-
-function formatArrayText(arr) {
-  if (!arr || arr.length === 0) return '-'
-  return arr.join('、')
-}
-
-// ========== 消息提示 ==========
-function showMessage(text, type = 'info') {
-  message.text = text
-  message.type = type
-  message.show = true
-  setTimeout(() => {
-    message.show = false
-  }, 3000)
-}
-
-// ========== 确认对话框 ==========
-function showConfirm(text) {
-  return new Promise((resolve) => {
-    confirmDialog.show = true
-    confirmDialog.text = text
-    confirmDialog.onConfirm = () => {
-      confirmDialog.show = false
-      resolve(true)
-    }
-    confirmDialog.onCancel = () => {
-      confirmDialog.show = false
-      resolve(false)
-    }
-  })
-}
-
-// ========== 业务操作 ==========
-function handleQuery() {
-  pagination.pageNum = 1
-  showMessage('查询成功', 'success')
-}
-
-function handleReset() {
-  queryParams.name = ''
-  queryParams.authTargetLevel = []
-  queryParams.applicableRegion = []
-  queryParams.authPublishLevel = []
-  queryParams.authPublishOrg = []
-  queryParams.publishYear = null
-  queryParams.status = ''
-  pagination.pageNum = 1
-  showMessage('已重置查询条件', 'info')
-}
-
-function checkSelection() {
-  if (selectedRows.value.length === 0) {
-    showMessage('请先选择数据', 'warning')
-    return false
-  }
-  return true
-}
-
-function handleCreate() {
-  showMessage('新建授权书功能待实现', 'info')
-}
-
-function handleUpdate() {
-  if (!checkSelection()) return
-  showMessage('更新功能待实现', 'info')
-}
-
-async function handleActivate() {
-  if (!checkSelection()) return
-  const confirmed = await showConfirm(`确定要将选中的 ${selectedRows.value.length} 条数据发布生效吗？`)
-  if (confirmed) {
-    showMessage('操作成功', 'success')
-  }
-}
-
-async function handleDeactivate() {
-  if (!checkSelection()) return
-  const confirmed = await showConfirm(`确定要将选中的 ${selectedRows.value.length} 条数据设为失效吗？`)
-  if (confirmed) {
-    showMessage('操作成功', 'success')
-  }
-}
-
-async function handleDelete() {
-  if (!checkSelection()) return
-  const confirmed = await showConfirm(`确定要删除选中的 ${selectedRows.value.length} 条数据吗？`)
-  if (confirmed) {
-    showMessage('删除成功', 'success')
-  }
-}
-
-function goToDetail(id) {
-  showMessage(`跳转到详情页: ID=${id}`, 'info')
-}
-
-// ========== 生命周期 ==========
-function handleClickOutside(event) {
-  if (!event.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
-    activeDropdown.value = ''
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <style scoped>
