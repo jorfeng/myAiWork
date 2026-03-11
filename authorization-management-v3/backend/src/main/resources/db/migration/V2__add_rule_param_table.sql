@@ -1,17 +1,8 @@
 -- V2__add_rule_param_table.sql
 -- Add Rule Parameter table for rule field configuration
 
--- Create update_updated_at_column function if not exists
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
 -- Rule Parameter Table
-CREATE TABLE rule_param (
+CREATE TABLE IF NOT EXISTS rule_param (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     name_en VARCHAR(100) NOT NULL UNIQUE,
@@ -32,17 +23,6 @@ COMMENT ON COLUMN rule_param.data_type IS '数据类型: TEXT-文本, NUMBER-数
 COMMENT ON COLUMN rule_param.business_mappings IS '业务对象与取值逻辑映射（JSON格式）';
 
 -- Create indexes
-CREATE INDEX idx_rule_param_status ON rule_param(status);
-CREATE INDEX idx_rule_param_name ON rule_param(name);
-CREATE INDEX idx_rule_param_name_en ON rule_param(name_en);
-
--- Apply trigger for updated_at
-DROP TRIGGER IF EXISTS update_rule_param_updated_at ON rule_param;
-CREATE TRIGGER update_rule_param_updated_at
-    BEFORE UPDATE ON rule_param
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- Add content_summary column to auth_letter if not exists
-ALTER TABLE auth_letter ADD COLUMN IF NOT EXISTS content_summary TEXT;
-COMMENT ON COLUMN auth_letter.content_summary IS '授权书内容摘要';
+CREATE INDEX IF NOT EXISTS idx_rule_param_status ON rule_param(status);
+CREATE INDEX IF NOT EXISTS idx_rule_param_name ON rule_param(name);
+CREATE INDEX IF NOT EXISTS idx_rule_param_name_en ON rule_param(name_en);
