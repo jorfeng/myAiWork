@@ -10,23 +10,23 @@
           <div class="form-row">
             <div class="form-item">
               <label class="form-label required">授权书名称</label>
-              <input type="text" v-model="formData.name" class="form-input" placeholder="请输入授权书名称" maxlength="100" />
+              <input type="text" v-model="formData.name" class="form-input" placeholder="请输入授权书名称" maxlength="100" :disabled="isReadonly" />
             </div>
             <div class="form-item">
               <label class="form-label required">授权发布层级</label>
-              <div class="multi-select-wrapper">
-                <div class="multi-select-trigger" @click="toggleDropdown('authPublishLevel')">
+              <div class="multi-select-wrapper" :class="{ disabled: isReadonly }">
+                <div class="multi-select-trigger" @click="!isReadonly && toggleDropdown('authPublishLevel')">
                   <span class="selected-tags" v-if="formData.authPublishLevel.length > 0">
                     <span class="tag" v-for="(code, index) in formData.authPublishLevel.slice(0, 2)" :key="index">
                       {{ getOptionLabel(code, authPublishLevelOptions) }}
-                      <span class="tag-close" @click.stop="removeFormItem('authPublishLevel', code)">×</span>
+                      <span class="tag-close" v-if="!isReadonly" @click.stop="removeFormItem('authPublishLevel', code)">×</span>
                     </span>
                     <span class="tag" v-if="formData.authPublishLevel.length > 2">+{{ formData.authPublishLevel.length - 2 }}</span>
                   </span>
                   <span class="placeholder" v-else>请选择</span>
                   <span class="arrow">▼</span>
                 </div>
-                <div class="dropdown" v-show="activeDropdown === 'authPublishLevel'">
+                <div class="dropdown" v-show="!isReadonly && activeDropdown === 'authPublishLevel'">
                   <div class="option" v-for="item in authPublishLevelOptions" :key="item.code" @click="toggleMultiSelect('authPublishLevel', item.code)">
                     <span class="checkbox" :class="{ checked: formData.authPublishLevel.includes(item.code) }"></span>
                     <span>{{ item.name }}</span>
@@ -36,19 +36,19 @@
             </div>
             <div class="form-item">
               <label class="form-label required">授权发布组织</label>
-              <div class="tree-select-wrapper">
-                <div class="tree-select-trigger" @click="toggleDropdown('authPublishOrg')">
+              <div class="tree-select-wrapper" :class="{ disabled: isReadonly }">
+                <div class="tree-select-trigger" @click="!isReadonly && toggleDropdown('authPublishOrg')">
                   <span class="selected-tags" v-if="formData.authPublishOrg.length > 0">
                     <span class="tag" v-for="(code, index) in formData.authPublishOrg.slice(0, 2)" :key="index">
                       {{ getOrgName(code) }}
-                      <span class="tag-close" @click.stop="removeFormItem('authPublishOrg', code)">×</span>
+                      <span class="tag-close" v-if="!isReadonly" @click.stop="removeFormItem('authPublishOrg', code)">×</span>
                     </span>
                     <span class="tag" v-if="formData.authPublishOrg.length > 2">+{{ formData.authPublishOrg.length - 2 }}</span>
                   </span>
                   <span class="placeholder" v-else>请选择</span>
                   <span class="arrow">▼</span>
                 </div>
-                <div class="tree-dropdown" v-show="activeDropdown === 'authPublishOrg'">
+                <div class="tree-dropdown" v-show="!isReadonly && activeDropdown === 'authPublishOrg'">
                   <tree-node
                     v-for="node in orgTreeData"
                     :key="node.code"
@@ -63,19 +63,19 @@
           <div class="form-row">
             <div class="form-item">
               <label class="form-label required">授权对象层级</label>
-              <div class="multi-select-wrapper">
-                <div class="multi-select-trigger" @click="toggleDropdown('authTargetLevel')">
+              <div class="multi-select-wrapper" :class="{ disabled: isReadonly }">
+                <div class="multi-select-trigger" @click="!isReadonly && toggleDropdown('authTargetLevel')">
                   <span class="selected-tags" v-if="formData.authTargetLevel.length > 0">
                     <span class="tag" v-for="(code, index) in formData.authTargetLevel.slice(0, 2)" :key="index">
                       {{ getOptionLabel(code, authTargetLevelOptions) }}
-                      <span class="tag-close" @click.stop="removeFormItem('authTargetLevel', code)">×</span>
+                      <span class="tag-close" v-if="!isReadonly" @click.stop="removeFormItem('authTargetLevel', code)">×</span>
                     </span>
                     <span class="tag" v-if="formData.authTargetLevel.length > 2">+{{ formData.authTargetLevel.length - 2 }}</span>
                   </span>
                   <span class="placeholder" v-else>请选择</span>
                   <span class="arrow">▼</span>
                 </div>
-                <div class="dropdown" v-show="activeDropdown === 'authTargetLevel'">
+                <div class="dropdown" v-show="!isReadonly && activeDropdown === 'authTargetLevel'">
                   <div class="option" v-for="item in authTargetLevelOptions" :key="item.code" @click="toggleMultiSelect('authTargetLevel', item.code)">
                     <span class="checkbox" :class="{ checked: formData.authTargetLevel.includes(item.code) }"></span>
                     <span>{{ item.name }}</span>
@@ -85,19 +85,19 @@
             </div>
             <div class="form-item">
               <label class="form-label required">适用区域</label>
-              <div class="multi-select-wrapper">
-                <div class="multi-select-trigger" @click="toggleDropdown('applicableRegion')">
+              <div class="multi-select-wrapper" :class="{ disabled: isReadonly }">
+                <div class="multi-select-trigger" @click="!isReadonly && toggleDropdown('applicableRegion')">
                   <span class="selected-tags" v-if="formData.applicableRegion.length > 0">
                     <span class="tag" v-for="(code, index) in formData.applicableRegion.slice(0, 2)" :key="index">
                       {{ getOptionLabel(code, applicableRegionOptions) }}
-                      <span class="tag-close" @click.stop="removeFormItem('applicableRegion', code)">×</span>
+                      <span class="tag-close" v-if="!isReadonly" @click.stop="removeFormItem('applicableRegion', code)">×</span>
                     </span>
                     <span class="tag" v-if="formData.applicableRegion.length > 2">+{{ formData.applicableRegion.length - 2 }}</span>
                   </span>
                   <span class="placeholder" v-else>请选择</span>
                   <span class="arrow">▼</span>
                 </div>
-                <div class="dropdown" v-show="activeDropdown === 'applicableRegion'">
+                <div class="dropdown" v-show="!isReadonly && activeDropdown === 'applicableRegion'">
                   <div class="option" v-for="item in applicableRegionOptions" :key="item.code" @click="toggleMultiSelect('applicableRegion', item.code)">
                     <span class="checkbox" :class="{ checked: formData.applicableRegion.includes(item.code) }"></span>
                     <span>{{ item.name }}</span>
@@ -107,21 +107,13 @@
             </div>
             <div class="form-item">
               <label class="form-label required">授权书发布年份</label>
-              <div class="year-select-wrapper">
-                <div class="year-select-trigger" @click="toggleDropdown('publishYear')">
-                  <span>{{ formData.publishYear || '请选择年份' }}</span>
-                  <span class="arrow">▼</span>
-                </div>
-                <div class="dropdown year-dropdown" v-show="activeDropdown === 'publishYear'">
-                  <div class="option" v-for="year in yearOptions" :key="year" @click="selectYear(year)">{{ year }}</div>
-                </div>
-              </div>
+              <input type="number" v-model="formData.publishYear" class="form-input" placeholder="请输入年份" min="2000" max="2100" :disabled="isReadonly" />
             </div>
           </div>
           <div class="form-row single">
             <div class="form-item full-width">
               <label class="form-label required">授权书内容摘要</label>
-              <textarea v-model="formData.contentSummary" class="form-textarea" placeholder="请输入授权书内容摘要" maxlength="4000" rows="4"></textarea>
+              <textarea v-model="formData.contentSummary" class="form-textarea" placeholder="请输入授权书内容摘要" maxlength="4000" rows="4" :disabled="isReadonly"></textarea>
             </div>
           </div>
         </div>
@@ -135,9 +127,9 @@
           <span class="section-label">附件</span>
           <div class="section-content">
             <div class="action-bar">
-              <button class="btn btn-primary btn-sm" @click="handleUpload">上传</button>
+              <button class="btn btn-primary btn-sm" @click="handleUpload" :disabled="isReadonly">上传</button>
               <button class="btn btn-default btn-sm" @click="handleDownloadAttachment">下载</button>
-              <button class="btn btn-danger btn-sm" @click="handleDeleteAttachment">删除</button>
+              <button class="btn btn-danger btn-sm" @click="handleDeleteAttachment" :disabled="isReadonly">删除</button>
             </div>
             <table class="data-table">
               <thead>
@@ -158,9 +150,9 @@
                   <td class="col-checkbox"><input type="checkbox" v-model="selectedAttachments" :value="row.id" /></td>
                   <td class="col-index">{{ (attachmentPage.pageNum - 1) * attachmentPage.pageSize + index + 1 }}</td>
                   <td class="col-action">
-                    <span class="icon-btn" title="删除" @click="handleDeleteAttachmentRow(row)">🗑️</span>
+                    <span class="icon-btn" title="删除" @click="!isReadonly && handleDeleteAttachmentRow(row)" :class="{ disabled: isReadonly }">🗑️</span>
                     <span class="icon-btn" title="下载" @click="handleDownloadRow(row)">📥</span>
-                    <span class="icon-btn" title="加密" @click="handleEncryptRow(row)">🔒</span>
+                    <span class="icon-btn" title="加密" @click="!isReadonly && handleEncryptRow(row)" :class="{ disabled: isReadonly }">🔒</span>
                   </td>
                   <td class="col-filename"><a class="link" @click="handleDownloadRow(row)">{{ row.fileName }}</a></td>
                   <td class="col-type">{{ row.docTypeName }}</td>
@@ -188,7 +180,7 @@
     </div>
 
     <!-- 授权规则区块 -->
-    <div class="section-card">
+    <div class="section-card" v-show="!isReadonly">
       <div class="card-body">
         <div class="section-header">
           <span class="section-label">授权规则</span>
@@ -250,13 +242,53 @@
       </div>
     </div>
 
+    <!-- 日志区块（已发布状态显示） -->
+    <div class="section-card log-section" v-if="isReadonly">
+      <div class="card-header collapsible" @click="logExpanded = !logExpanded">
+        <span class="card-title">操作日志</span>
+        <span class="collapse-icon" :class="{ expanded: logExpanded }">▼</span>
+      </div>
+      <div class="card-body" v-show="logExpanded">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-index">序号</th>
+              <th class="col-action-type">操作类型</th>
+              <th class="col-user">操作人</th>
+              <th class="col-time">操作时间</th>
+              <th class="col-remark">备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(log, index) in operationLogs" :key="log.id">
+              <td class="col-index">{{ index + 1 }}</td>
+              <td class="col-action-type">{{ log.actionType }}</td>
+              <td class="col-user">{{ log.operator }}</td>
+              <td class="col-time">{{ log.operatedAt }}</td>
+              <td class="col-remark">{{ log.remark || '-' }}</td>
+            </tr>
+            <tr v-if="operationLogs.length === 0">
+              <td colspan="5" style="text-align: center; color: #909399; padding: 20px;">暂无操作日志</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- 底部悬浮按钮 -->
     <div class="bottom-actions">
-      <button class="btn btn-default" @click="handleSave" :disabled="!canSave">保存</button>
-      <button class="btn btn-primary" @click="handleSaveAndPublish" :disabled="!canSaveAndPublish">保存并发布</button>
-      <button class="btn btn-success" @click="handlePublish" :disabled="!canPublish">发布</button>
-      <button class="btn btn-default" @click="handleCancel">取消</button>
-      <button class="btn btn-danger" @click="handleDeleteAuthLetter" :disabled="!canDelete">删除</button>
+      <template v-if="!isReadonly">
+        <button class="btn btn-default" @click="handleSave" :disabled="!canSave">保存</button>
+        <button class="btn btn-primary" @click="handleSaveAndPublish" :disabled="!canSaveAndPublish">保存并发布</button>
+        <button class="btn btn-success" @click="handlePublish" :disabled="!canPublish">发布</button>
+        <button class="btn btn-default" @click="handleCancel">取消</button>
+        <button class="btn btn-danger" @click="handleDeleteAuthLetter" :disabled="!canDelete">删除</button>
+      </template>
+      <template v-else>
+        <button class="btn btn-default" @click="handleCancel">返回</button>
+        <button class="btn btn-warning" @click="handleExpire">失效</button>
+        <button class="btn btn-danger" @click="handleDeleteAuthLetter">删除</button>
+      </template>
     </div>
 
     <!-- 场景配置弹窗 -->
@@ -622,6 +654,8 @@ export default {
       loading: false,
       activeDropdown: '',
       pageStatus: 'DRAFT',
+      logExpanded: false,
+      operationLogs: [],
       message: { show: false, type: 'info', text: '' },
       confirmDialog: { show: false, text: '', onConfirm: () => {}, onCancel: () => {} },
       formData: {
@@ -668,6 +702,9 @@ export default {
       for (let i = new Date().getFullYear(); i >= new Date().getFullYear() - 10; i--) years.push(i)
       return years
     },
+    isReadonly() {
+      return this.pageStatus === 'PUBLISHED'
+    },
     canSave() {
       return this.pageStatus === 'DRAFT'
     },
@@ -678,7 +715,7 @@ export default {
       return this.pageStatus === 'DRAFT'
     },
     canDelete() {
-      return this.pageStatus === 'DRAFT'
+      return this.pageStatus === 'DRAFT' || this.pageStatus === 'PUBLISHED'
     }
   },
   mounted() {
@@ -712,14 +749,14 @@ export default {
         ])
 
         // 设置下拉选项
-        if (authTargetLevelRes.success) this.authTargetLevelOptions = authTargetLevelRes.data
-        if (authPublishLevelRes.success) this.authPublishLevelOptions = authPublishLevelRes.data
-        if (applicableRegionRes.success) this.applicableRegionOptions = applicableRegionRes.data
-        if (orgTreeRes.success) this.orgTreeData = orgTreeRes.data
-        if (industryTreeRes.success) this.industryTreeData = industryTreeRes.data
-        if (businessScenariosRes.success) this.businessScenarioOptions = businessScenariosRes.data
-        if (decisionLevelsRes.success) this.decisionLevelOptions = decisionLevelsRes.data
-        if (ruleFieldsRes.success) this.fieldOptions = ruleFieldsRes.data
+        if (authTargetLevelRes.code === 200) this.authTargetLevelOptions = authTargetLevelRes.data || []
+        if (authPublishLevelRes.code === 200) this.authPublishLevelOptions = authPublishLevelRes.data || []
+        if (applicableRegionRes.code === 200) this.applicableRegionOptions = applicableRegionRes.data || []
+        if (orgTreeRes.code === 200) this.orgTreeData = orgTreeRes.data || []
+        if (industryTreeRes.code === 200) this.industryTreeData = industryTreeRes.data || []
+        if (businessScenariosRes.code === 200) this.businessScenarioOptions = businessScenariosRes.data || []
+        if (decisionLevelsRes.code === 200) this.decisionLevelOptions = decisionLevelsRes.data || []
+        if (ruleFieldsRes.code === 200) this.fieldOptions = ruleFieldsRes.data || []
 
         // 如果是编辑模式，加载授权书详情
         if (!this.isNew && this.authLetterId) {
@@ -736,7 +773,7 @@ export default {
     async loadAuthLetterDetail() {
       try {
         const res = await api.getAuthLetterDetail(this.authLetterId)
-        if (res.success && res.data) {
+        if (res.code === 200 && res.data) {
           const detail = res.data
           this.formData.name = detail.name
           this.formData.authPublishLevel = detail.authPublishLevel || []
@@ -751,6 +788,13 @@ export default {
           if (detail.scenes) {
             this.sceneData = detail.scenes
             this.scenePage.total = detail.scenes.length
+          }
+
+          // 模拟操作日志数据（已发布状态）
+          if (this.pageStatus === 'PUBLISHED') {
+            this.operationLogs = [
+              { id: 1, actionType: '发布', operator: detail.publishedBy || 'admin', operatedAt: detail.publishedAt || new Date().toISOString(), remark: '授权书发布' }
+            ]
           }
         } else {
           this.showMessage(res.message || '加载授权书详情失败', 'error')
@@ -1039,7 +1083,7 @@ export default {
 
         if (this.isNew) {
           res = await api.createAuthLetter(data)
-          if (res.success) {
+          if (res.code === 200) {
             this.authLetterId = res.data
             this.isNew = false
             this.showMessage('保存成功', 'success')
@@ -1050,7 +1094,7 @@ export default {
           }
         } else {
           res = await api.updateAuthLetter(this.authLetterId, data)
-          if (res.success) {
+          if (res.code === 200) {
             this.showMessage('保存成功', 'success')
           } else {
             this.showMessage(res.message || '保存失败', 'error')
@@ -1075,12 +1119,12 @@ export default {
         if (this.isNew) {
           // 先创建
           res = await api.createAuthLetter(data)
-          if (res.success) {
+          if (res.code === 200) {
             this.authLetterId = res.data
             this.isNew = false
             // 再发布
             const publishRes = await api.publishAuthLetter(this.authLetterId)
-            if (publishRes.success) {
+            if (publishRes.code === 200) {
               this.pageStatus = 'PUBLISHED'
               this.showMessage('保存并发布成功', 'success')
               window.history.replaceState({}, '', `?id=${this.authLetterId}`)
@@ -1093,10 +1137,10 @@ export default {
         } else {
           // 先更新
           res = await api.updateAuthLetter(this.authLetterId, data)
-          if (res.success) {
+          if (res.code === 200) {
             // 再发布
             const publishRes = await api.publishAuthLetter(this.authLetterId)
-            if (publishRes.success) {
+            if (publishRes.code === 200) {
               this.pageStatus = 'PUBLISHED'
               this.showMessage('保存并发布成功', 'success')
             } else {
@@ -1120,7 +1164,7 @@ export default {
           try {
             this.loading = true
             const res = await api.publishAuthLetter(this.authLetterId)
-            if (res.success) {
+            if (res.code === 200) {
               this.pageStatus = 'PUBLISHED'
               this.showMessage('发布成功', 'success')
             } else {
@@ -1140,13 +1184,22 @@ export default {
       window.location.href = '/list.html'
     },
 
+    handleExpire() {
+      this.showConfirm('确定要将该授权书设为失效吗？').then(async ok => {
+        if (ok) {
+          this.pageStatus = 'EXPIRED'
+          this.showMessage('操作成功', 'success')
+        }
+      })
+    },
+
     handleDeleteAuthLetter() {
       this.showConfirm('确定要删除该授权书吗？').then(async ok => {
         if (ok) {
           try {
             this.loading = true
             const res = await api.deleteAuthLetter(this.authLetterId)
-            if (res.success) {
+            if (res.code === 200) {
               this.showMessage('删除成功', 'success')
               setTimeout(() => {
                 window.location.href = '/list.html'
@@ -1585,4 +1638,44 @@ export default {
 .message-success { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
 .message-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #faecd8; }
 .message-error { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+
+/* 只读/禁用状态 */
+.form-input:disabled, .form-textarea:disabled {
+  background-color: #f5f7fa;
+  cursor: not-allowed;
+  color: #606266;
+}
+.multi-select-wrapper.disabled, .tree-select-wrapper.disabled {
+  opacity: 0.7;
+}
+.multi-select-wrapper.disabled .multi-select-trigger,
+.tree-select-wrapper.disabled .tree-select-trigger {
+  background-color: #f5f7fa;
+  cursor: not-allowed;
+}
+.icon-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 日志区块 */
+.log-section .card-header.collapsible {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.log-section .card-header.collapsible:hover {
+  background-color: #f5f7fa;
+}
+.collapse-icon {
+  font-size: 12px;
+  color: #909399;
+  transition: transform 0.2s;
+}
+.collapse-icon.expanded {
+  transform: rotate(180deg);
+}
+.col-action-type { width: 100px; text-align: center; }
+.col-remark { min-width: 200px; }
 </style>

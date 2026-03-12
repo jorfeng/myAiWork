@@ -378,10 +378,10 @@ export default {
           api.getLookupOptions('authPublishLevel'),
           api.getOrgTree()
         ])
-        this.authTargetLevelOptions = targetLevel.data || []
-        this.applicableRegionOptions = region.data || []
-        this.authPublishLevelOptions = publishLevel.data || []
-        this.orgTreeData = orgTree.data || []
+        this.authTargetLevelOptions = targetLevel.code === 200 ? (targetLevel.data || []) : []
+        this.applicableRegionOptions = region.code === 200 ? (region.data || []) : []
+        this.authPublishLevelOptions = publishLevel.code === 200 ? (publishLevel.data || []) : []
+        this.orgTreeData = orgTree.code === 200 ? (orgTree.data || []) : []
       } catch (error) {
         console.error('加载Lookup数据失败:', error)
       }
@@ -403,8 +403,12 @@ export default {
         if (this.queryParams.authPublishOrg.length > 0) params.authPublishOrg = this.queryParams.authPublishOrg
 
         const res = await api.getAuthLetterList(params)
-        this.tableData = res.data?.list || []
-        this.pagination.total = res.data?.total || 0
+        if (res.code === 200) {
+          this.tableData = res.data?.list || []
+          this.pagination.total = res.data?.total || 0
+        } else {
+          this.showMessage(res.message || '加载数据失败', 'error')
+        }
       } catch (error) {
         console.error('加载数据失败:', error)
         this.showMessage('加载数据失败', 'error')
@@ -486,16 +490,20 @@ export default {
       if (this.selectedRows.length === 0) { this.showMessage('请先选择数据', 'warning'); return false }
       return true
     },
-    handleCreate() { this.$router.push('/auth-letter/create') },
+    handleCreate() { window.location.href = '/AuthLetterDetail' },
     handleUpdate() { if (this.checkSelection()) this.showMessage('更新功能待实现', 'info') },
     async handleActivate() {
       if (!this.checkSelection()) return
       const confirmed = await this.showConfirm(`确定要将选中的 ${this.selectedRows.length} 条数据发布生效吗？`)
       if (confirmed) {
         try {
-          await api.batchPublish(this.selectedRows)
-          this.showMessage('操作成功', 'success')
-          this.selectedRows = []; this.selectAll = false; this.loadTableData()
+          const res = await api.batchPublish(this.selectedRows)
+          if (res.code === 200) {
+            this.showMessage('操作成功', 'success')
+            this.selectedRows = []; this.selectAll = false; this.loadTableData()
+          } else {
+            this.showMessage(res.message || '操作失败', 'error')
+          }
         } catch (error) { this.showMessage('操作失败', 'error') }
       }
     },
@@ -504,9 +512,13 @@ export default {
       const confirmed = await this.showConfirm(`确定要将选中的 ${this.selectedRows.length} 条数据设为失效吗？`)
       if (confirmed) {
         try {
-          await api.batchExpire(this.selectedRows)
-          this.showMessage('操作成功', 'success')
-          this.selectedRows = []; this.selectAll = false; this.loadTableData()
+          const res = await api.batchExpire(this.selectedRows)
+          if (res.code === 200) {
+            this.showMessage('操作成功', 'success')
+            this.selectedRows = []; this.selectAll = false; this.loadTableData()
+          } else {
+            this.showMessage(res.message || '操作失败', 'error')
+          }
         } catch (error) { this.showMessage('操作失败', 'error') }
       }
     },
@@ -515,13 +527,17 @@ export default {
       const confirmed = await this.showConfirm(`确定要删除选中的 ${this.selectedRows.length} 条数据吗？`)
       if (confirmed) {
         try {
-          await api.batchDelete(this.selectedRows)
-          this.showMessage('删除成功', 'success')
-          this.selectedRows = []; this.selectAll = false; this.loadTableData()
+          const res = await api.batchDelete(this.selectedRows)
+          if (res.code === 200) {
+            this.showMessage('删除成功', 'success')
+            this.selectedRows = []; this.selectAll = false; this.loadTableData()
+          } else {
+            this.showMessage(res.message || '删除失败', 'error')
+          }
         } catch (error) { this.showMessage('删除失败', 'error') }
       }
     },
-    goToDetail(id) { this.$router.push(`/auth-letter/${id}`) },
+    goToDetail(id) { window.location.href = `/AuthLetterDetail?id=${id}` },
     handleClickOutside(event) {
       if (!event.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
         this.activeDropdown = ''
