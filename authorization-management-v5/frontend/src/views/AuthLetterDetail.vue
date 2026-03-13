@@ -1,243 +1,254 @@
 <template>
-  <div class="page-container">
-    <div class="page-header">
-      <h2>{{ isNew ? '新建授权书' : '授权书详情' }}</h2>
-    </div>
-
-    <!-- 基本信息 -->
-    <div class="section">
-      <div class="section-title">基本信息</div>
-      <div class="form-container">
+  <div class="auth-letter-detail-page">
+    <!-- 基本信息区 -->
+    <div class="info-card">
+      <div class="card-title">基本信息</div>
+      <div class="info-form">
         <div class="form-row">
-          <div class="form-item required">
-            <label>授权书名称</label>
-            <input type="text" v-model="formData.name" :disabled="isReadonly" placeholder="请输入授权书名称" />
+          <div class="form-item">
+            <label class="form-label required">授权书名称</label>
+            <input type="text" v-model="formData.name" class="form-input" :disabled="!isEditable" placeholder="请输入授权书名称" />
           </div>
-          <div class="form-item required">
-            <label>授权发布层级</label>
-            <select v-model="formData.authPublishLevel" multiple :disabled="isReadonly">
-              <option v-for="item in authPublishLevelList" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </option>
-            </select>
-          </div>
-          <div class="form-item required">
-            <label>授权发布组织</label>
-            <div class="tree-select">
-              <div class="tree-select-trigger" @click="showOrgTree = !showOrgTree">
-                <span>{{ orgSelectedText || '请选择' }}</span>
+          <div class="form-item">
+            <label class="form-label required">授权发布层级</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleSelect('authPublishLevel')" :class="{ disabled: !isEditable }">
+                <span class="selected-tags" v-if="formData.authPublishLevel.length > 0">
+                  <span class="tag" v-for="(item, index) in getSelectedLabels(formData.authPublishLevel, authPublishLevelOptions)" :key="index">{{ item }}</span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
                 <span class="arrow">▼</span>
               </div>
-              <div class="tree-select-dropdown" v-if="showOrgTree && !isReadonly">
-                <tree-node
-                  :nodes="authPublishOrgTree"
-                  :selected="formData.authPublishOrg"
-                  @select="handleOrgSelect"
-                ></tree-node>
+              <div class="multi-select-dropdown" v-show="activeDropdown === 'authPublishLevel' && isEditable">
+                <div class="select-option" v-for="item in authPublishLevelOptions" :key="item.code" @click="toggleMultiSelect('authPublishLevel', item.code)">
+                  <span class="checkbox" :class="{ checked: formData.authPublishLevel.includes(item.code) }"></span>
+                  <span>{{ item.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-item">
+            <label class="form-label required">授权发布组织</label>
+            <div class="tree-select-wrapper">
+              <div class="tree-select-trigger" @click="toggleSelect('authPublishOrg')" :class="{ disabled: !isEditable }">
+                <span class="selected-tags" v-if="formData.authPublishOrg.length > 0">
+                  <span class="tag" v-for="(item, index) in formData.authPublishOrg.slice(0, 2)" :key="index">{{ getOrgName(item) }}</span>
+                  <span class="tag" v-if="formData.authPublishOrg.length > 2">+{{ formData.authPublishOrg.length - 2 }}</span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="tree-select-dropdown" v-show="activeDropdown === 'authPublishOrg' && isEditable">
+                <tree-node v-for="node in authPublishOrgTree" :key="node.code" :node="node" :selected-codes="formData.authPublishOrg" @toggle="toggleOrgTreeNode" />
               </div>
             </div>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-item required">
-            <label>授权对象层级</label>
-            <select v-model="formData.authTargetLevel" multiple :disabled="isReadonly">
-              <option v-for="item in authTargetLevelList" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </option>
-            </select>
-          </div>
-          <div class="form-item required">
-            <label>适用区域</label>
-            <div class="tree-select">
-              <div class="tree-select-trigger" @click="showRegionTree = !showRegionTree">
-                <span>{{ regionSelectedText || '请选择' }}</span>
+          <div class="form-item">
+            <label class="form-label required">授权对象层级</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleSelect('authTargetLevel')" :class="{ disabled: !isEditable }">
+                <span class="selected-tags" v-if="formData.authTargetLevel.length > 0">
+                  <span class="tag" v-for="(item, index) in getSelectedLabels(formData.authTargetLevel, authTargetLevelOptions)" :key="index">{{ item }}</span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
                 <span class="arrow">▼</span>
               </div>
-              <div class="tree-select-dropdown" v-if="showRegionTree && !isReadonly">
-                <tree-node
-                  :nodes="applicableRegionTree"
-                  :selected="formData.applicableRegion"
-                  @select="handleRegionSelect"
-                ></tree-node>
+              <div class="multi-select-dropdown" v-show="activeDropdown === 'authTargetLevel' && isEditable">
+                <div class="select-option" v-for="item in authTargetLevelOptions" :key="item.code" @click="toggleMultiSelect('authTargetLevel', item.code)">
+                  <span class="checkbox" :class="{ checked: formData.authTargetLevel.includes(item.code) }"></span>
+                  <span>{{ item.name }}</span>
+                </div>
               </div>
             </div>
           </div>
-          <div class="form-item required">
-            <label>授权书发布年份</label>
-            <input type="number" v-model="formData.publishYear" :disabled="isReadonly" min="2000" max="2100" />
+          <div class="form-item">
+            <label class="form-label required">适用区域</label>
+            <div class="tree-select-wrapper">
+              <div class="tree-select-trigger" @click="toggleSelect('applicableRegion')" :class="{ disabled: !isEditable }">
+                <span class="selected-tags" v-if="formData.applicableRegion.length > 0">
+                  <span class="tag" v-for="(item, index) in formData.applicableRegion.slice(0, 2)" :key="index">{{ getRegionName(item) }}</span>
+                  <span class="tag" v-if="formData.applicableRegion.length > 2">+{{ formData.applicableRegion.length - 2 }}</span>
+                </span>
+                <span class="placeholder" v-else>请选择</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="tree-select-dropdown" v-show="activeDropdown === 'applicableRegion' && isEditable">
+                <tree-node v-for="node in applicableRegionTree" :key="node.code" :node="node" :selected-codes="formData.applicableRegion" @toggle="toggleRegionTreeNode" />
+              </div>
+            </div>
+          </div>
+          <div class="form-item">
+            <label class="form-label required">授权书发布年份</label>
+            <div class="year-select-wrapper">
+              <div class="year-select-trigger" @click="toggleSelect('publishYear')" :class="{ disabled: !isEditable }">
+                <span>{{ formData.publishYear || '请选择年份' }}</span>
+                <span class="arrow">▼</span>
+              </div>
+              <div class="year-select-dropdown" v-show="activeDropdown === 'publishYear' && isEditable">
+                <div class="year-option" v-for="year in yearOptions" :key="year" @click="selectYear(year)">{{ year }}</div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-item full-width required">
-            <label>授权书内容摘要</label>
-            <textarea v-model="formData.summary" :disabled="isReadonly" maxlength="4000" placeholder="请输入授权书内容摘要"></textarea>
+        <div class="form-row single">
+          <div class="form-item full">
+            <label class="form-label required">授权书内容摘要</label>
+            <textarea v-model="formData.summary" class="form-textarea" :disabled="!isEditable" placeholder="请输入授权书内容摘要" maxlength="4000" rows="4"></textarea>
+            <span class="char-count">{{ (formData.summary || '').length }}/4000</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 附件区块 -->
-    <div class="section">
-      <div class="section-title">附件</div>
-      <div class="section-toolbar">
-        <button class="btn btn-primary" @click="handleUpload" :disabled="isReadonly">上传</button>
-        <button class="btn btn-default" @click="handleDownloadAttachment">下载</button>
-        <button class="btn btn-danger" @click="handleDeleteAttachment" :disabled="isReadonly">删除</button>
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th><input type="checkbox" v-model="attachmentSelectAll" @change="handleAttachmentSelectAll" /></th>
-            <th>序号</th>
-            <th>操作</th>
-            <th>文档名称</th>
-            <th>文档类型</th>
-            <th>创建人</th>
-            <th>创建时间</th>
-            <th>更新人</th>
-            <th>更新时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, index) in attachmentList" :key="item.id">
-            <td><input type="checkbox" v-model="selectedAttachments" :value="item.id" /></td>
-            <td>{{ (attachmentPageNum - 1) * attachmentPageSize + index + 1 }}</td>
-            <td>
-              <span class="icon-btn" @click="handleDownloadSingle(item)">下载</span>
-              <span class="icon-btn disabled">加密</span>
-            </td>
-            <td><a href="javascript:;" class="link" @click="handleDownloadSingle(item)">{{ item.docName }}</a></td>
-            <td>{{ getDocTypeText(item.docType) }}</td>
-            <td>{{ item.createdBy }}</td>
-            <td>{{ formatTime(item.createdTime) }}</td>
-            <td>{{ item.updatedBy }}</td>
-            <td>{{ formatTime(item.updatedTime) }}</td>
-          </tr>
-          <tr v-if="attachmentList.length === 0">
-            <td colspan="9" class="empty-row">暂无数据</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="pagination">
-        <span>共 {{ attachmentTotal }} 条</span>
-        <select v-model="attachmentPageSize" @change="loadAttachmentList">
-          <option :value="10">10条/页</option>
-          <option :value="30">30条/页</option>
-          <option :value="50">50条/页</option>
-        </select>
-        <button :disabled="attachmentPageNum === 1" @click="attachmentPageNum = 1; loadAttachmentList()">首页</button>
-        <button :disabled="attachmentPageNum === 1" @click="attachmentPageNum--; loadAttachmentList()">上一页</button>
-        <span>第 {{ attachmentPageNum }} 页</span>
-        <button :disabled="attachmentPageNum >= attachmentTotalPages" @click="attachmentPageNum++; loadAttachmentList()">下一页</button>
-      </div>
-    </div>
-
-    <!-- 授权规则区块 -->
-    <div class="section">
-      <div class="section-title">授权规则</div>
-      <div class="section-toolbar">
-        <button class="btn btn-primary" @click="handleAddScene" :disabled="isReadonly">添加场景</button>
-        <button class="btn btn-danger" @click="handleDeleteScene" :disabled="isReadonly">删除</button>
-      </div>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th><input type="checkbox" v-model="sceneSelectAll" @change="handleSceneSelectAll" /></th>
-            <th>序号</th>
-            <th>操作</th>
-            <th>场景</th>
-            <th>产业</th>
-            <th>业务场景</th>
-            <th>具体规则</th>
-            <th>决策层级</th>
-            <th>创建人</th>
-            <th>创建时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, index) in sceneList" :key="item.id">
-            <td><input type="checkbox" v-model="selectedScenes" :value="item.id" /></td>
-            <td>{{ (scenePageNum - 1) * scenePageSize + index + 1 }}</td>
-            <td>
-              <span class="icon-btn" @click="handleEditScene(item)" v-if="!isReadonly">编辑</span>
-              <span class="icon-btn" @click="handleDeleteSingleScene(item.id)" v-if="!isReadonly">删除</span>
-            </td>
-            <td>{{ item.sceneName }}</td>
-            <td>{{ item.industry ? item.industry.join(',') : '' }}</td>
-            <td>{{ getBusinessSceneText(item.businessScene) }}</td>
-            <td>{{ item.specificRule }}</td>
-            <td>{{ getDecisionLevelText(item.decisionLevel) }}</td>
-            <td>{{ item.createdBy }}</td>
-            <td>{{ formatTime(item.createdTime) }}</td>
-          </tr>
-          <tr v-if="sceneList.length === 0">
-            <td colspan="10" class="empty-row">暂无数据</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="pagination">
-        <span>共 {{ sceneTotal }} 条</span>
-        <select v-model="scenePageSize" @change="loadSceneList">
-          <option :value="10">10条/页</option>
-          <option :value="30">30条/页</option>
-          <option :value="50">50条/页</option>
-        </select>
-        <button :disabled="scenePageNum === 1" @click="scenePageNum = 1; loadSceneList()">首页</button>
-        <button :disabled="scenePageNum === 1" @click="scenePageNum--; loadSceneList()">上一页</button>
-        <span>第 {{ scenePageNum }} 页</span>
-        <button :disabled="scenePageNum >= sceneTotalPages" @click="scenePageNum++; loadSceneList()">下一页</button>
-      </div>
-    </div>
-
-    <!-- 操作日志区块（已发布/已失效状态显示） -->
-    <div class="section" v-if="showLogSection">
-      <div class="section-title collapsible" @click="logCollapsed = !logCollapsed">
-        日志
-        <span class="collapse-icon">{{ logCollapsed ? '▶' : '▼' }}</span>
-      </div>
-      <div class="section-content" v-if="!logCollapsed">
+    <div class="info-card" v-if="isEditable || attachmentList.length > 0">
+      <div class="card-title">附件</div>
+      <div class="section-content">
+        <div class="action-row" v-if="isEditable">
+          <button class="btn btn-default btn-sm" @click="handleUpload">上传</button>
+          <button class="btn btn-default btn-sm" @click="handleDownloadAttachment">下载</button>
+          <button class="btn btn-default btn-sm" @click="handleDeleteAttachment">删除</button>
+        </div>
         <table class="data-table">
           <thead>
             <tr>
-              <th>序号</th>
-              <th>操作</th>
-              <th>操作人</th>
-              <th>操作时间</th>
+              <th class="col-checkbox" v-if="isEditable"><input type="checkbox" v-model="attachmentSelectAll" @change="handleAttachmentSelectAll" /></th>
+              <th class="col-index">序号</th>
+              <th class="col-action">操作</th>
+              <th class="col-name">文档名称</th>
+              <th class="col-type">文档类型</th>
+              <th class="col-user">创建人</th>
+              <th class="col-time">创建时间</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in logList" :key="item.id">
-              <td>{{ (logPageNum - 1) * logPageSize + index + 1 }}</td>
-              <td>{{ item.operation }}</td>
-              <td>{{ item.operator }}</td>
-              <td>{{ formatTime(item.operationTime) }}</td>
+            <tr v-if="attachmentList.length === 0">
+              <td :colspan="isEditable ? 7 : 6" style="text-align: center; padding: 20px; color: #909399;">暂无附件</td>
             </tr>
-            <tr v-if="logList.length === 0">
-              <td colspan="4" class="empty-row">暂无数据</td>
+            <tr v-else v-for="(row, index) in attachmentList" :key="row.id">
+              <td class="col-checkbox" v-if="isEditable"><input type="checkbox" v-model="selectedAttachments" :value="row.id" /></td>
+              <td class="col-index">{{ (attachmentPageNum - 1) * attachmentPageSize + index + 1 }}</td>
+              <td class="col-action">
+                <span class="icon-btn" @click="handleDownloadSingle(row)" title="下载">📥</span>
+                <span class="icon-btn disabled" title="加密(暂不可用)">🔒</span>
+              </td>
+              <td class="col-name"><a class="link" @click="handleDownloadSingle(row)">{{ row.docName }}</a></td>
+              <td class="col-type">{{ getDocTypeText(row.docType) }}</td>
+              <td class="col-user">{{ row.createdBy || '-' }}</td>
+              <td class="col-time">{{ formatTime(row.createdTime) }}</td>
             </tr>
           </tbody>
         </table>
-        <div class="pagination">
-          <span>共 {{ logTotal }} 条</span>
-          <select v-model="logPageSize" @change="loadLogList">
+        <div class="pagination" v-if="attachmentTotal > 0">
+          <span>共 {{ attachmentTotal }} 条</span>
+          <select v-model="attachmentPageSize" @change="loadAttachmentList">
             <option :value="10">10条/页</option>
             <option :value="30">30条/页</option>
             <option :value="50">50条/页</option>
           </select>
-          <button :disabled="logPageNum === 1" @click="logPageNum = 1; loadLogList()">首页</button>
-          <button :disabled="logPageNum === 1" @click="logPageNum--; loadLogList()">上一页</button>
-          <span>第 {{ logPageNum }} 页</span>
-          <button :disabled="logPageNum >= logTotalPages" @click="logPageNum++; loadLogList()">下一页</button>
+          <button :disabled="attachmentPageNum === 1" @click="attachmentPageNum--; loadAttachmentList()">上一页</button>
+          <span>第 {{ attachmentPageNum }} 页</span>
+          <button :disabled="attachmentPageNum >= attachmentTotalPages" @click="attachmentPageNum++; loadAttachmentList()">下一页</button>
         </div>
+      </div>
+    </div>
+
+    <!-- 授权规则区块 -->
+    <div class="info-card">
+      <div class="card-title">授权规则</div>
+      <div class="section-content">
+        <div class="action-row" v-if="isEditable">
+          <button class="btn btn-primary btn-sm" @click="handleAddScene">添加场景</button>
+          <button class="btn btn-default btn-sm" @click="handleDeleteScene">删除</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-checkbox" v-if="isEditable"><input type="checkbox" v-model="sceneSelectAll" @change="handleSceneSelectAll" /></th>
+              <th class="col-index">序号</th>
+              <th class="col-action" v-if="isEditable">操作</th>
+              <th class="col-name">场景</th>
+              <th class="col-name">产业</th>
+              <th class="col-name">业务场景</th>
+              <th class="col-name">具体规则</th>
+              <th class="col-name">决策层级</th>
+              <th class="col-user">创建人</th>
+              <th class="col-time">创建时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="sceneList.length === 0">
+              <td :colspan="isEditable ? 10 : 9" style="text-align: center; padding: 20px; color: #909399;">暂无授权规则</td>
+            </tr>
+            <tr v-else v-for="(row, index) in sceneList" :key="row.id">
+              <td class="col-checkbox" v-if="isEditable"><input type="checkbox" v-model="selectedScenes" :value="row.id" /></td>
+              <td class="col-index">{{ (scenePageNum - 1) * scenePageSize + index + 1 }}</td>
+              <td class="col-action" v-if="isEditable">
+                <span class="icon-btn" @click="handleEditScene(row)" title="编辑">✏️</span>
+                <span class="icon-btn" @click="handleDeleteSingleScene(row.id)" title="删除">🗑️</span>
+              </td>
+              <td class="col-name">{{ row.sceneName }}</td>
+              <td class="col-name">{{ getIndustryText(row.industry) }}</td>
+              <td class="col-name">{{ getBusinessSceneText(row.businessScene) }}</td>
+              <td class="col-name">{{ row.specificRule || '-' }}</td>
+              <td class="col-name">{{ getDecisionLevelText(row.decisionLevel) }}</td>
+              <td class="col-user">{{ row.createdBy || '-' }}</td>
+              <td class="col-time">{{ formatTime(row.createdTime) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pagination" v-if="sceneTotal > 0">
+          <span>共 {{ sceneTotal }} 条</span>
+          <select v-model="scenePageSize" @change="loadSceneList">
+            <option :value="10">10条/页</option>
+            <option :value="30">30条/页</option>
+            <option :value="50">50条/页</option>
+          </select>
+          <button :disabled="scenePageNum === 1" @click="scenePageNum--; loadSceneList()">上一页</button>
+          <span>第 {{ scenePageNum }} 页</span>
+          <button :disabled="scenePageNum >= sceneTotalPages" @click="scenePageNum++; loadSceneList()">下一页</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日志区块（已发布状态显示） -->
+    <div class="info-card" v-if="showLogSection">
+      <div class="card-title collapsible" @click="logCollapsed = !logCollapsed">
+        日志
+        <span class="expand-icon" :class="{ expanded: !logCollapsed }">▼</span>
+      </div>
+      <div class="section-content" v-show="!logCollapsed">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-index">序号</th>
+              <th class="col-name">操作</th>
+              <th class="col-user">操作人</th>
+              <th class="col-time">操作时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="logList.length === 0">
+              <td colspan="4" style="text-align: center; padding: 20px; color: #909399;">暂无日志</td>
+            </tr>
+            <tr v-else v-for="(row, index) in logList" :key="row.id">
+              <td class="col-index">{{ (logPageNum - 1) * logPageSize + index + 1 }}</td>
+              <td class="col-name">{{ getOperationText(row.operation) }}</td>
+              <td class="col-user">{{ row.operator || '-' }}</td>
+              <td class="col-time">{{ formatTime(row.operationTime) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- 底部按钮 -->
     <div class="footer-buttons">
-      <template v-if="formData.status === 'DRAFT' || isNew">
+      <template v-if="isEditable">
         <button class="btn btn-primary" @click="handleSave">保存</button>
-        <button class="btn btn-primary" @click="handleSaveAndPublish">保存并发布</button>
+        <button class="btn btn-primary" @click="handleSaveAndPublish" v-if="!isNew">保存并发布</button>
         <button class="btn btn-primary" @click="handlePublish" v-if="!isNew">发布</button>
         <button class="btn btn-default" @click="handleCancel">取消</button>
         <button class="btn btn-danger" @click="handleDelete" v-if="!isNew">删除</button>
@@ -259,40 +270,62 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-item required">
-              <label>场景名称</label>
-              <input type="text" v-model="sceneForm.sceneName" placeholder="请输入场景名称" />
+              <label class="form-label">场景名称</label>
+              <input type="text" v-model="sceneForm.sceneName" class="form-input" placeholder="请输入场景名称" />
             </div>
             <div class="form-item required">
-              <label>产业</label>
-              <select v-model="sceneForm.industry" multiple>
-                <option v-for="item in industryTree" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
+              <label class="form-label">产业</label>
+              <div class="multi-select-wrapper">
+                <div class="multi-select-trigger" @click="toggleSelect('sceneIndustry')">
+                  <span class="selected-tags" v-if="sceneForm.industry.length > 0">
+                    <span class="tag" v-for="(item, index) in getSelectedLabels(sceneForm.industry, industryOptions)" :key="index">{{ item }}</span>
+                  </span>
+                  <span class="placeholder" v-else>请选择</span>
+                  <span class="arrow">▼</span>
+                </div>
+                <div class="multi-select-dropdown" v-show="activeDropdown === 'sceneIndustry'">
+                  <div class="select-option" v-for="item in industryOptions" :key="item.code" @click="toggleSceneIndustry(item.code)">
+                    <span class="checkbox" :class="{ checked: sceneForm.industry.includes(item.code) }"></span>
+                    <span>{{ item.name }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="form-item required">
-              <label>业务场景</label>
-              <select v-model="sceneForm.businessScene">
-                <option value="">请选择</option>
-                <option v-for="item in businessSceneList" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
+              <label class="form-label">业务场景</label>
+              <div class="select-wrapper">
+                <div class="select-trigger" @click="toggleSelect('sceneBusinessScene')">
+                  <span>{{ getBusinessSceneText(sceneForm.businessScene) || '请选择' }}</span>
+                  <span class="arrow">▼</span>
+                </div>
+                <div class="select-dropdown" v-show="activeDropdown === 'sceneBusinessScene'">
+                  <div class="select-option" @click="selectSceneBusinessScene('')">请选择</div>
+                  <div class="select-option" v-for="item in businessSceneOptions" :key="item.code" @click="selectSceneBusinessScene(item.code)">
+                    {{ item.name }}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="form-row">
             <div class="form-item">
-              <label>决策层级</label>
-              <select v-model="sceneForm.decisionLevel">
-                <option value="">请选择</option>
-                <option v-for="item in decisionLevelList" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </option>
-              </select>
+              <label class="form-label">决策层级</label>
+              <div class="select-wrapper">
+                <div class="select-trigger" @click="toggleSelect('sceneDecisionLevel')">
+                  <span>{{ getDecisionLevelText(sceneForm.decisionLevel) || '请选择' }}</span>
+                  <span class="arrow">▼</span>
+                </div>
+                <div class="select-dropdown" v-show="activeDropdown === 'sceneDecisionLevel'">
+                  <div class="select-option" @click="selectSceneDecisionLevel('')">请选择</div>
+                  <div class="select-option" v-for="item in decisionLevelOptions" :key="item.code" @click="selectSceneDecisionLevel(item.code)">
+                    {{ item.name }}
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="form-item full-width">
-              <label>具体规则</label>
-              <textarea v-model="sceneForm.specificRule" maxlength="1000" placeholder="请输入具体规则"></textarea>
+              <label class="form-label">具体规则</label>
+              <textarea v-model="sceneForm.specificRule" class="form-textarea" maxlength="1000" placeholder="请输入具体规则" rows="3"></textarea>
             </div>
           </div>
 
@@ -336,8 +369,8 @@
                       <input type="number" v-model="condition.compareValue" placeholder="请输入数值" />
                       <select v-model="condition.unit">
                         <option value="">单位</option>
-                        <option v-for="item in measureUnitList" :key="item.value" :value="item.value">
-                          {{ item.label }}
+                        <option v-for="item in measureUnitOptions" :key="item.code" :value="item.code">
+                          {{ item.name }}
                         </option>
                       </select>
                     </template>
@@ -355,7 +388,6 @@
               </div>
               <div class="rule-config-actions">
                 <span class="text-btn" @click="addCondition">+ 新增条件</span>
-                <span class="text-btn" @click="addConditionGroup">+ 新增子条件组</span>
               </div>
             </div>
           </div>
@@ -370,23 +402,53 @@
 </template>
 
 <script>
+// ========== 树节点组件 ==========
+const TreeNode = {
+  name: 'TreeNode',
+  props: {
+    node: Object,
+    selectedCodes: Array
+  },
+  data() {
+    return {
+      expanded: false
+    }
+  },
+  computed: {
+    hasChildren() { return this.node.children && this.node.children.length > 0 },
+    isChecked() { return this.selectedCodes.includes(this.node.code) }
+  },
+  methods: {
+    toggleCheck() { this.$emit('toggle', this.node) },
+    toggleExpand() { this.expanded = !this.expanded }
+  },
+  template: `
+    <div class="tree-node">
+      <div class="tree-node-content" :style="{ paddingLeft: (node.level || 0) * 20 + 'px' }">
+        <span v-if="hasChildren" class="tree-expand-icon" :class="{ expanded: expanded }" @click="toggleExpand">▶</span>
+        <span v-else class="tree-expand-placeholder"></span>
+        <span class="tree-checkbox" :class="{ checked: isChecked }" @click="toggleCheck"></span>
+        <span class="tree-node-label" @click="toggleCheck">{{ node.name }}</span>
+      </div>
+      <div v-if="hasChildren && expanded" class="tree-children">
+        <tree-node v-for="child in node.children" :key="child.code" :node="{ ...child, level: (node.level || 0) + 1 }" :selected-codes="selectedCodes" @toggle="$emit('toggle', $event)" />
+      </div>
+    </div>
+  `
+}
+
+// ========== API 请求方法 ==========
 import axios from 'axios';
 
-// 内联request配置
 const BASE_URL = '/api';
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  headers: { 'Content-Type': 'application/json' }
 });
 axiosInstance.interceptors.response.use(
   response => response.data,
-  error => {
-    console.error('请求错误:', error);
-    return Promise.reject(error);
-  }
+  error => { console.error('请求错误:', error); return Promise.reject(error); }
 );
 const request = {
   get: (url, params) => axiosInstance.get(url, { params }),
@@ -397,10 +459,12 @@ const request = {
 
 export default {
   name: 'AuthLetterDetail',
+  components: { TreeNode },
   data() {
     return {
       letterId: null,
       isNew: true,
+      activeDropdown: '',
       formData: {
         name: '',
         authTargetLevel: [],
@@ -413,20 +477,17 @@ export default {
       },
 
       // 下拉列表数据
-      authTargetLevelList: [],
-      applicableRegionTree: [],
-      authPublishLevelList: [],
+      authTargetLevelOptions: [],
+      authPublishLevelOptions: [],
       authPublishOrgTree: [],
-      industryTree: [],
-      businessSceneList: [],
-      decisionLevelList: [],
-      docTypeList: [],
-      measureUnitList: [],
+      applicableRegionOptions: [],
+      applicableRegionTree: [],
+      industryOptions: [],
+      businessSceneOptions: [],
+      decisionLevelOptions: [],
+      docTypeOptions: [],
+      measureUnitOptions: [],
       ruleParamList: [],
-
-      // 树形选择器
-      showRegionTree: false,
-      showOrgTree: false,
 
       // 附件
       attachmentList: [],
@@ -465,34 +526,28 @@ export default {
     };
   },
   computed: {
-    isReadonly() {
-      return this.formData.status !== 'DRAFT';
+    isEditable() {
+      return this.formData.status === 'DRAFT';
     },
     showLogSection() {
       return this.formData.status === 'PUBLISHED' || this.formData.status === 'INVALID';
     },
-    regionSelectedText() {
-      return this.formData.applicableRegion.length > 0
-        ? `已选择 ${this.formData.applicableRegion.length} 项`
-        : '';
-    },
-    orgSelectedText() {
-      return this.formData.authPublishOrg.length > 0
-        ? `已选择 ${this.formData.authPublishOrg.length} 项`
-        : '';
+    yearOptions() {
+      const years = [];
+      for (let i = new Date().getFullYear(); i >= new Date().getFullYear() - 10; i--) years.push(i);
+      return years;
     },
     attachmentTotalPages() {
       return Math.ceil(this.attachmentTotal / this.attachmentPageSize) || 1;
     },
     sceneTotalPages() {
       return Math.ceil(this.sceneTotal / this.scenePageSize) || 1;
-    },
-    logTotalPages() {
-      return Math.ceil(this.logTotal / this.logPageSize) || 1;
     }
   },
-  created() {
-    this.letterId = this.$route.query.id;
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside);
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    this.letterId = params.get('id');
     this.isNew = !this.letterId;
     this.loadLookupData();
     if (!this.isNew) {
@@ -501,14 +556,17 @@ export default {
       this.loadSceneList();
     }
   },
+  beforeDestroy() {
+    document.removeEventListener('click', this.handleClickOutside);
+  },
   methods: {
     async loadLookupData() {
       try {
         const [
           targetLevel,
-          region,
           publishLevel,
           publishOrg,
+          region,
           industry,
           businessScene,
           decisionLevel,
@@ -517,9 +575,9 @@ export default {
           ruleParams
         ] = await Promise.all([
           request.get('/lookup/AUTH_TARGET_LEVEL'),
-          request.get('/lookup/APPLICABLE_REGION'),
           request.get('/lookup/AUTH_PUBLISH_LEVEL'),
           request.get('/lookup/AUTH_PUBLISH_ORG'),
+          request.get('/lookup/APPLICABLE_REGION'),
           request.get('/lookup/INDUSTRY'),
           request.get('/lookup/BUSINESS_SCENE'),
           request.get('/lookup/DECISION_LEVEL'),
@@ -527,30 +585,47 @@ export default {
           request.get('/lookup/MEASURE_UNIT'),
           request.get('/rule-param/allActive')
         ]);
-        this.authTargetLevelList = targetLevel.data || [];
-        this.applicableRegionTree = region.data || [];
-        this.authPublishLevelList = publishLevel.data || [];
-        this.authPublishOrgTree = publishOrg.data || [];
-        this.industryTree = industry.data || [];
-        this.businessSceneList = businessScene.data || [];
-        this.decisionLevelList = decisionLevel.data || [];
-        this.docTypeList = docType.data || [];
-        this.measureUnitList = measureUnit.data || [];
-        this.ruleParamList = ruleParams.data || [];
+        // 扁平列表（使用 transformLookupData 转换字段名）
+        this.authTargetLevelOptions = targetLevel.code === 200 ? this.transformLookupData(targetLevel.data) : [];
+        this.authPublishLevelOptions = publishLevel.code === 200 ? this.transformLookupData(publishLevel.data) : [];
+        this.industryOptions = industry.code === 200 ? this.transformLookupData(industry.data) : [];
+        this.businessSceneOptions = businessScene.code === 200 ? this.transformLookupData(businessScene.data) : [];
+        this.decisionLevelOptions = decisionLevel.code === 200 ? this.transformLookupData(decisionLevel.data) : [];
+        this.docTypeOptions = docType.code === 200 ? this.transformLookupData(docType.data) : [];
+        this.measureUnitOptions = measureUnit.code === 200 ? this.transformLookupData(measureUnit.data) : [];
+        // 树形结构
+        this.authPublishOrgTree = publishOrg.code === 200 ? this.transformLookupData(publishOrg.data) : [];
+        this.applicableRegionOptions = region.code === 200 ? this.transformLookupData(region.data) : [];
+        this.applicableRegionTree = this.applicableRegionOptions;
+        // 规则参数
+        this.ruleParamList = ruleParams.code === 200 ? (ruleParams.data || []) : [];
       } catch (error) {
         console.error('加载下拉数据失败:', error);
       }
     },
+
+    transformLookupData(data) {
+      if (!data || !Array.isArray(data)) return [];
+      return data.map(item => ({
+        code: item.value,
+        name: item.label,
+        children: item.children && item.children.length > 0 ? this.transformLookupData(item.children) : []
+      }));
+    },
+
     async loadDetail() {
       try {
         const res = await request.get(`/authorization/detail?id=${this.letterId}`);
         if (res.code === 200 && res.data) {
           this.formData = {
-            ...res.data,
+            name: res.data.name || '',
             authTargetLevel: res.data.authTargetLevel || [],
             applicableRegion: res.data.applicableRegion || [],
             authPublishLevel: res.data.authPublishLevel || [],
-            authPublishOrg: res.data.authPublishOrg || []
+            authPublishOrg: res.data.authPublishOrg || [],
+            publishYear: res.data.publishYear,
+            summary: res.data.summary || '',
+            status: res.data.status || 'DRAFT'
           };
           if (this.showLogSection) {
             this.loadLogList();
@@ -560,6 +635,7 @@ export default {
         console.error('加载详情失败:', error);
       }
     },
+
     async loadAttachmentList() {
       try {
         const res = await request.get(`/attachment/list?letterId=${this.letterId}&pageNum=${this.attachmentPageNum}&pageSize=${this.attachmentPageSize}`);
@@ -571,6 +647,7 @@ export default {
         console.error('加载附件失败:', error);
       }
     },
+
     async loadSceneList() {
       try {
         const res = await request.get(`/scene/list?letterId=${this.letterId}&pageNum=${this.scenePageNum}&pageSize=${this.scenePageSize}`);
@@ -582,6 +659,7 @@ export default {
         console.error('加载场景失败:', error);
       }
     },
+
     async loadLogList() {
       try {
         const res = await request.post('/log/list', {
@@ -597,109 +675,66 @@ export default {
         console.error('加载日志失败:', error);
       }
     },
-    handleRegionSelect(values) {
-      this.formData.applicableRegion = values;
+
+    // 下拉选择
+    toggleSelect(name) {
+      this.activeDropdown = this.activeDropdown === name ? '' : name;
     },
-    handleOrgSelect(values) {
-      this.formData.authPublishOrg = values;
+    toggleMultiSelect(field, value) {
+      const index = this.formData[field].indexOf(value);
+      if (index > -1) this.formData[field].splice(index, 1);
+      else this.formData[field].push(value);
     },
-    async handleSave() {
-      if (!this.validateForm()) return;
-      try {
-        if (this.isNew) {
-          const res = await request.post('/authorization/create', this.formData);
-          if (res.code === 200) {
-            this.letterId = res.data;
-            this.isNew = false;
-            alert('保存成功');
+    selectYear(year) {
+      this.formData.publishYear = year;
+      this.activeDropdown = '';
+    },
+    getSelectedLabels(codes, options) {
+      return codes.map(code => {
+        const item = options.find(o => o.code === code);
+        return item ? item.name : code;
+      });
+    },
+    getOrgName(code) {
+      const findNode = (nodes, targetCode) => {
+        for (const node of nodes) {
+          if (node.code === targetCode) return node.name;
+          if (node.children && node.children.length > 0) {
+            const found = findNode(node.children, targetCode);
+            if (found) return found;
           }
-        } else {
-          await request.put('/authorization/update', { ...this.formData, id: this.letterId });
-          alert('保存成功');
         }
-      } catch (error) {
-        alert('保存失败');
-      }
+        return null;
+      };
+      return findNode(this.authPublishOrgTree, code) || code;
     },
-    async handleSaveAndPublish() {
-      await this.handleSave();
-      if (this.letterId) {
-        await this.handlePublish();
-      }
+    getRegionName(code) {
+      const findNode = (nodes, targetCode) => {
+        for (const node of nodes) {
+          if (node.code === targetCode) return node.name;
+          if (node.children && node.children.length > 0) {
+            const found = findNode(node.children, targetCode);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return findNode(this.applicableRegionOptions, code) || code;
     },
-    async handlePublish() {
-      if (!this.letterId) {
-        alert('请先保存');
-        return;
-      }
-      try {
-        await request.post(`/authorization/publish?id=${this.letterId}`);
-        alert('发布成功');
-        this.loadDetail();
-      } catch (error) {
-        alert('发布失败');
-      }
+    toggleOrgTreeNode(node) {
+      const index = this.formData.authPublishOrg.indexOf(node.code);
+      if (index > -1) this.formData.authPublishOrg.splice(index, 1);
+      else this.formData.authPublishOrg.push(node.code);
     },
-    handleCancel() {
-      this.$router.push('/#/AuthLetterList');
+    toggleRegionTreeNode(node) {
+      const index = this.formData.applicableRegion.indexOf(node.code);
+      if (index > -1) this.formData.applicableRegion.splice(index, 1);
+      else this.formData.applicableRegion.push(node.code);
     },
-    handleBack() {
-      this.$router.push('/#/AuthLetterList');
-    },
-    async handleDeactivate() {
-      if (!confirm('确定要失效该授权书吗？')) return;
-      try {
-        await request.post(`/authorization/deactivate?id=${this.letterId}`);
-        alert('操作成功');
-        this.loadDetail();
-      } catch (error) {
-        alert('操作失败');
-      }
-    },
-    async handleDelete() {
-      if (!confirm('确定要删除该授权书吗？')) return;
-      try {
-        await request.delete(`/authorization/delete?id=${this.letterId}`);
-        alert('删除成功');
-        this.$router.push('/#/AuthLetterList');
-      } catch (error) {
-        alert('删除失败');
-      }
-    },
-    validateForm() {
-      if (!this.formData.name) {
-        alert('请输入授权书名称');
-        return false;
-      }
-      if (!this.formData.authPublishLevel || this.formData.authPublishLevel.length === 0) {
-        alert('请选择授权发布层级');
-        return false;
-      }
-      if (!this.formData.authPublishOrg || this.formData.authPublishOrg.length === 0) {
-        alert('请选择授权发布组织');
-        return false;
-      }
-      if (!this.formData.authTargetLevel || this.formData.authTargetLevel.length === 0) {
-        alert('请选择授权对象层级');
-        return false;
-      }
-      if (!this.formData.applicableRegion || this.formData.applicableRegion.length === 0) {
-        alert('请选择适用区域');
-        return false;
-      }
-      if (!this.formData.publishYear) {
-        alert('请选择授权书发布年份');
-        return false;
-      }
-      return true;
-    },
+
     // 附件操作
     handleAttachmentSelectAll() {
-      if (this.attachmentSelectAll) {
-        this.selectedAttachments = this.attachmentList.map(item => item.id);
-      } else {
-        this.selectedAttachments = [];
-      }
+      this.selectedAttachments = this.attachmentSelectAll ? this.attachmentList.map(item => item.id) : [];
     },
     handleUpload() {
       alert('上传功能暂未实现');
@@ -728,13 +763,10 @@ export default {
         alert('删除失败');
       }
     },
+
     // 场景操作
     handleSceneSelectAll() {
-      if (this.sceneSelectAll) {
-        this.selectedScenes = this.sceneList.map(item => item.id);
-      } else {
-        this.selectedScenes = [];
-      }
+      this.selectedScenes = this.sceneSelectAll ? this.sceneList.map(item => item.id) : [];
     },
     handleAddScene() {
       this.editingSceneId = null;
@@ -862,6 +894,22 @@ export default {
         alert('删除失败');
       }
     },
+
+    // 场景弹窗下拉
+    toggleSceneIndustry(code) {
+      const index = this.sceneForm.industry.indexOf(code);
+      if (index > -1) this.sceneForm.industry.splice(index, 1);
+      else this.sceneForm.industry.push(code);
+    },
+    selectSceneBusinessScene(code) {
+      this.sceneForm.businessScene = code;
+      this.activeDropdown = '';
+    },
+    selectSceneDecisionLevel(code) {
+      this.sceneForm.decisionLevel = code;
+      this.activeDropdown = '';
+    },
+
     // 规则配置
     addCondition() {
       this.sceneForm.ruleConditions.push({
@@ -872,19 +920,6 @@ export default {
         unit: '',
         compareFieldId: '',
         logic: 'AND'
-      });
-    },
-    addConditionGroup() {
-      // 简化实现：添加一个子条件组的条件
-      this.sceneForm.ruleConditions.push({
-        fieldId: '',
-        operator: '>',
-        compareType: 'NUMBER',
-        compareValue: '',
-        unit: '',
-        compareFieldId: '',
-        logic: 'AND',
-        isGroup: true
       });
     },
     removeCondition(index) {
@@ -900,497 +935,255 @@ export default {
       const condition = this.sceneForm.ruleConditions[index];
       condition.logic = condition.logic === 'AND' ? 'OR' : 'AND';
     },
+
     // 工具方法
-    getStatusText(status) {
-      const map = {
-        'DRAFT': '草稿',
-        'PUBLISHED': '已发布',
-        'INVALID': '已失效'
-      };
-      return map[status] || status;
-    },
     getDocTypeText(type) {
-      const item = this.docTypeList.find(d => d.value === type);
-      return item ? item.label : type;
+      const item = this.docTypeOptions.find(d => d.code === type);
+      return item ? item.name : type;
     },
-    getBusinessSceneText(value) {
-      const item = this.businessSceneList.find(d => d.value === value);
-      return item ? item.label : value;
+    getIndustryText(codes) {
+      if (!codes || codes.length === 0) return '-';
+      return codes.map(c => {
+        const item = this.industryOptions.find(o => o.code === c);
+        return item ? item.name : c;
+      }).join('、');
     },
-    getDecisionLevelText(value) {
-      const item = this.decisionLevelList.find(d => d.value === value);
-      return item ? item.label : value;
+    getBusinessSceneText(code) {
+      const item = this.businessSceneOptions.find(d => d.code === code);
+      return item ? item.name : (code || '-');
+    },
+    getDecisionLevelText(code) {
+      const item = this.decisionLevelOptions.find(d => d.code === code);
+      return item ? item.name : (code || '-');
+    },
+    getOperationText(operation) {
+      const map = {
+        'CREATE': '创建',
+        'UPDATE': '更新',
+        'PUBLISH': '发布',
+        'DEACTIVATE': '失效',
+        'DELETE': '删除'
+      };
+      return map[operation] || operation;
     },
     formatTime(time) {
       if (!time) return '-';
       return time.replace('T', ' ').substring(0, 19);
-    }
-  },
-  components: {
-    'tree-node': {
-      props: ['nodes', 'selected'],
-      data() {
-        return {
-          expanded: {}
-        };
-      },
-      methods: {
-        isSelected(value) {
-          return this.selected && this.selected.includes(value);
-        },
-        toggleSelect(node) {
-          let newSelected = [...(this.selected || [])];
-          const index = newSelected.indexOf(node.value);
-          if (index > -1) {
-            newSelected.splice(index, 1);
-          } else {
-            newSelected.push(node.value);
-          }
-          this.$emit('select', newSelected);
-        },
-        toggleExpand(node) {
-          this.$set(this.expanded, node.id, !this.expanded[node.id]);
-        }
-      },
-      render(h) {
-        const self = this;
-        if (!this.nodes || this.nodes.length === 0) {
-          return h('div', { class: 'tree-node' });
-        }
-        const children = this.nodes.map(function(node) {
-          const nodeChildren = [];
-          const contentChildren = [
-            h('input', {
-              attrs: { type: 'checkbox' },
-              domProps: { checked: self.isSelected(node.value) },
-              on: { change: function() { self.toggleSelect(node); } }
-            }),
-            h('span', {
-              class: 'tree-node-label',
-              on: { click: function() { self.toggleExpand(node); } }
-            }, node.label)
-          ];
-          if (node.children && node.children.length) {
-            contentChildren.push(
-              h('span', { class: 'expand-icon' }, self.expanded[node.id] ? '▼' : '▶')
-            );
-          }
-          nodeChildren.push(
-            h('div', { class: 'tree-node-content' }, contentChildren)
-          );
-          if (node.children && node.children.length && self.expanded[node.id]) {
-            nodeChildren.push(
-              h('tree-node', {
-                props: { nodes: node.children, selected: self.selected },
-                on: { select: function(val) { self.$emit('select', val); } }
-              })
-            );
-          }
-          return h('div', { class: 'tree-node-item', key: node.id }, nodeChildren);
-        });
-        return h('div', { class: 'tree-node' }, children);
+    },
+
+    handleClickOutside(event) {
+      if (!event.target.closest('.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper')) {
+        this.activeDropdown = '';
       }
+    },
+
+    // 保存相关
+    async handleSave() {
+      if (!this.validateForm()) return;
+      try {
+        if (this.isNew) {
+          const res = await request.post('/authorization/create', this.formData);
+          if (res.code === 200) {
+            this.letterId = res.data;
+            this.isNew = false;
+            alert('保存成功');
+          }
+        } else {
+          await request.put('/authorization/update', { ...this.formData, id: this.letterId });
+          alert('保存成功');
+        }
+      } catch (error) {
+        alert('保存失败');
+      }
+    },
+    async handleSaveAndPublish() {
+      await this.handleSave();
+      if (this.letterId) {
+        await this.handlePublish();
+      }
+    },
+    async handlePublish() {
+      if (!this.letterId) {
+        alert('请先保存');
+        return;
+      }
+      try {
+        await request.post(`/authorization/publish?id=${this.letterId}`);
+        alert('发布成功');
+        this.loadDetail();
+      } catch (error) {
+        alert('发布失败');
+      }
+    },
+    handleCancel() {
+      window.location.href = '#/AuthLetterList';
+    },
+    handleBack() {
+      window.location.href = '#/AuthLetterList';
+    },
+    async handleDeactivate() {
+      if (!confirm('确定要失效该授权书吗？')) return;
+      try {
+        await request.post(`/authorization/deactivate?id=${this.letterId}`);
+        alert('操作成功');
+        this.loadDetail();
+      } catch (error) {
+        alert('操作失败');
+      }
+    },
+    async handleDelete() {
+      if (!confirm('确定要删除该授权书吗？')) return;
+      try {
+        await request.delete(`/authorization/delete?id=${this.letterId}`);
+        alert('删除成功');
+        window.location.href = '#/AuthLetterList';
+      } catch (error) {
+        alert('删除失败');
+      }
+    },
+    validateForm() {
+      if (!this.formData.name) {
+        alert('请输入授权书名称');
+        return false;
+      }
+      if (!this.formData.authPublishLevel || this.formData.authPublishLevel.length === 0) {
+        alert('请选择授权发布层级');
+        return false;
+      }
+      if (!this.formData.authPublishOrg || this.formData.authPublishOrg.length === 0) {
+        alert('请选择授权发布组织');
+        return false;
+      }
+      if (!this.formData.authTargetLevel || this.formData.authTargetLevel.length === 0) {
+        alert('请选择授权对象层级');
+        return false;
+      }
+      if (!this.formData.applicableRegion || this.formData.applicableRegion.length === 0) {
+        alert('请选择适用区域');
+        return false;
+      }
+      if (!this.formData.publishYear) {
+        alert('请选择授权书发布年份');
+        return false;
+      }
+      return true;
     }
   }
 };
 </script>
 
 <style scoped>
-.page-container {
-  padding: 20px;
-  background: #fff;
-  min-height: 100vh;
-  padding-bottom: 80px;
-}
+* { box-sizing: border-box; }
+.auth-letter-detail-page { padding: 20px; background: #f5f7fa; min-height: 100vh; padding-bottom: 80px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: #333; }
+.info-card { background: #fff; border-radius: 4px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
+.card-title { padding: 12px 20px; border-bottom: 1px solid #e8e8e8; font-weight: 600; font-size: 15px; }
+.card-title.collapsible { cursor: pointer; }
+.expand-icon { float: right; transition: transform 0.2s; }
+.expand-icon.expanded { transform: rotate(180deg); }
+.section-content { padding: 16px 20px; }
+.info-form { padding: 20px; }
+.form-row { display: flex; flex-wrap: wrap; margin-bottom: 15px; }
+.form-row.single { margin-bottom: 0; }
+.form-item { display: flex; align-items: center; margin-right: 20px; margin-bottom: 10px; }
+.form-item.full { width: 100%; margin-right: 0; }
+.form-item.full-width { flex: 1; min-width: 300px; }
+.form-label { width: 100px; text-align: right; margin-right: 12px; color: #666; flex-shrink: 0; }
+.form-label.required::before { content: '*'; color: #f00; margin-right: 4px; }
+.form-input { width: 220px; height: 32px; padding: 0 12px; border: 1px solid #dcdfe6; border-radius: 4px; outline: none; transition: border-color 0.2s; }
+.form-input:focus { border-color: #409eff; }
+.form-input:disabled { background: #f5f5f5; cursor: not-allowed; }
+.form-textarea { flex: 1; min-width: 300px; height: 80px; padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px; resize: vertical; outline: none; }
+.form-textarea:focus { border-color: #409eff; }
+.form-textarea:disabled { background: #f5f5f5; cursor: not-allowed; }
+.char-count { position: absolute; right: 140px; bottom: 8px; color: #999; font-size: 12px; }
 
-.page-header {
-  margin-bottom: 20px;
-}
+/* 下拉选择 */
+.multi-select-wrapper, .tree-select-wrapper, .select-wrapper, .year-select-wrapper { position: relative; width: 220px; }
+.multi-select-trigger, .tree-select-trigger, .select-trigger, .year-select-trigger { height: 32px; padding: 0 30px 0 12px; border: 1px solid #dcdfe6; border-radius: 4px; background: #fff; cursor: pointer; display: flex; align-items: center; position: relative; overflow: hidden; }
+.multi-select-trigger.disabled, .tree-select-trigger.disabled, .select-trigger.disabled, .year-select-trigger.disabled { background: #f5f5f5; cursor: not-allowed; }
+.arrow { position: absolute; right: 10px; font-size: 12px; color: #c0c4cc; }
+.placeholder { color: #c0c4cc; }
+.selected-tags { display: flex; flex-wrap: wrap; gap: 4px; overflow: hidden; }
+.tag { background: #f0f2f5; padding: 2px 6px; border-radius: 3px; font-size: 12px; white-space: nowrap; }
+.multi-select-dropdown, .tree-select-dropdown, .select-dropdown, .year-select-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #dcdfe6; border-radius: 4px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1); z-index: 100; max-height: 250px; overflow-y: auto; margin-top: 4px; }
+.select-option, .year-option { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.select-option:hover, .year-option:hover { background: #f5f7fa; }
+.checkbox { width: 14px; height: 14px; border: 1px solid #dcdfe6; border-radius: 2px; display: inline-block; position: relative; flex-shrink: 0; }
+.checkbox.checked { background: #409eff; border-color: #409eff; }
+.checkbox.checked::after { content: '✓'; color: #fff; font-size: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
-.section {
-  margin-bottom: 20px;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-}
+/* 树形选择 */
+.tree-node-content { display: flex; align-items: center; padding: 6px 8px; cursor: pointer; }
+.tree-node-content:hover { background: #f5f7fa; }
+.tree-expand-icon { width: 16px; font-size: 10px; color: #c0c4cc; transition: transform 0.2s; flex-shrink: 0; }
+.tree-expand-icon.expanded { transform: rotate(90deg); }
+.tree-expand-placeholder { width: 16px; flex-shrink: 0; }
+.tree-checkbox { width: 14px; height: 14px; border: 1px solid #dcdfe6; border-radius: 2px; margin-right: 8px; position: relative; flex-shrink: 0; }
+.tree-checkbox.checked { background: #409eff; border-color: #409eff; }
+.tree-checkbox.checked::after { content: '✓'; color: #fff; font-size: 10px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.tree-node-label { font-size: 14px; }
 
-.section-title {
-  padding: 12px 20px;
-  background: #fafafa;
-  border-bottom: 1px solid #e8e8e8;
-  font-weight: 600;
-}
+/* 按钮 */
+.btn { padding: 6px 16px; border-radius: 4px; border: 1px solid #dcdfe6; background: #fff; cursor: pointer; font-size: 14px; margin-right: 10px; transition: all 0.2s; }
+.btn:hover { opacity: 0.9; }
+.btn-primary { background: #409eff; border-color: #409eff; color: #fff; }
+.btn-default { background: #fff; color: #333; }
+.btn-danger { background: #f56c6c; border-color: #f56c6c; color: #fff; }
+.btn-sm { padding: 4px 12px; font-size: 13px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.section-title.collapsible {
-  cursor: pointer;
-}
+/* 表格 */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th, .data-table td { padding: 10px 8px; text-align: center; border-bottom: 1px solid #e8e8e8; }
+.data-table th { background: #fafafa; font-weight: 600; color: #333; }
+.data-table tbody tr:hover { background: #f5f5f5; }
+.col-checkbox { width: 40px; }
+.col-index { width: 50px; }
+.col-action { width: 80px; }
+.col-name { text-align: left; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-type { width: 100px; }
+.col-user { width: 80px; }
+.col-time { width: 150px; }
+.icon-btn { cursor: pointer; margin-right: 8px; font-size: 14px; }
+.icon-btn.disabled { color: #ccc; cursor: not-allowed; }
+.link { color: #409eff; cursor: pointer; }
+.link:hover { text-decoration: underline; }
 
-.collapse-icon {
-  float: right;
-}
+/* 分页 */
+.pagination { display: flex; align-items: center; justify-content: flex-end; margin-top: 16px; gap: 10px; font-size: 13px; color: #606266; }
+.pagination select { height: 28px; padding: 0 8px; border: 1px solid #dcdfe6; border-radius: 4px; }
+.pagination button { padding: 4px 12px; border: 1px solid #dcdfe6; background: #fff; border-radius: 4px; cursor: pointer; }
+.pagination button:disabled { color: #c0c4cc; cursor: not-allowed; }
 
-.section-content {
-  padding: 20px;
-}
+/* 操作行 */
+.action-row { padding: 10px 0; border-bottom: 1px solid #e8e8e8; margin-bottom: 10px; }
 
-.section-toolbar {
-  padding: 10px 20px;
-  border-bottom: 1px solid #e8e8e8;
-}
+/* 底部按钮 */
+.footer-buttons { position: fixed; bottom: 0; left: 0; right: 0; padding: 15px 20px; background: #fff; border-top: 1px solid #e8e8e8; text-align: center; z-index: 100; box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05); }
 
-.form-container {
-  padding: 20px;
-}
+/* 弹窗 */
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { width: 800px; max-height: 90vh; background: #fff; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+.modal-header { padding: 15px 20px; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { margin: 0; font-size: 16px; }
+.close { font-size: 24px; cursor: pointer; color: #999; }
+.close:hover { color: #333; }
+.modal-body { padding: 20px; overflow-y: auto; max-height: calc(90vh - 120px); }
+.modal-footer { padding: 15px 20px; border-top: 1px solid #e8e8e8; text-align: right; }
 
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  margin-bottom: 15px;
-}
-
-.form-item {
-  display: flex;
-  align-items: flex-start;
-  margin-right: 20px;
-  margin-bottom: 10px;
-}
-
-.form-item.full-width {
-  width: 100%;
-}
-
-.form-item label {
-  width: 100px;
-  text-align: right;
-  margin-right: 10px;
-  color: #666;
-  line-height: 32px;
-  flex-shrink: 0;
-}
-
-.form-item.required label::before {
-  content: '*';
-  color: #f00;
-  margin-right: 4px;
-}
-
-.form-item input,
-.form-item select,
-.form-item textarea {
-  width: 200px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-item textarea {
-  width: calc(100% - 120px);
-  height: 80px;
-  padding: 10px;
-  resize: vertical;
-}
-
-.form-item select[multiple] {
-  height: 80px;
-}
-
-.tree-select {
-  position: relative;
-  width: 200px;
-}
-
-.tree-select-trigger {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  background: #fff;
-}
-
-.tree-select-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 300px;
-  max-height: 300px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  z-index: 1000;
-}
-
-.tree-node {
-  padding: 5px 0;
-}
-
-.tree-node-item {
-  padding: 0 10px;
-}
-
-.tree-node-content {
-  display: flex;
-  align-items: center;
-  padding: 5px 0;
-}
-
-.tree-node-content input {
-  margin-right: 8px;
-  width: auto;
-}
-
-.tree-node-label {
-  cursor: pointer;
-}
-
-.expand-icon {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #999;
-}
-
-.tree-node-children {
-  padding-left: 20px;
-}
-
-.btn {
-  padding: 6px 20px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-right: 10px;
-}
-
-.btn-primary {
-  background: #1890ff;
-  color: #fff;
-  border-color: #1890ff;
-}
-
-.btn-default {
-  background: #fff;
-  color: #333;
-}
-
-.btn-danger {
-  background: #ff4d4f;
-  color: #fff;
-  border-color: #ff4d4f;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 10px;
-  border: 1px solid #e8e8e8;
-  text-align: center;
-}
-
-.data-table th {
-  background: #fafafa;
-  font-weight: 600;
-}
-
-.empty-row {
-  text-align: center;
-  color: #999;
-  padding: 40px;
-}
-
-.link {
-  color: #1890ff;
-  text-decoration: none;
-}
-
-.icon-btn {
-  cursor: pointer;
-  color: #1890ff;
-  margin-right: 10px;
-}
-
-.icon-btn.disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 15px;
-  padding: 10px 0;
-}
-
-.pagination select {
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin: 0 10px;
-}
-
-.pagination button {
-  padding: 5px 15px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  margin: 0 5px;
-}
-
-.pagination button:disabled {
-  color: #ccc;
-  cursor: not-allowed;
-}
-
-.footer-buttons {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 15px 20px;
-  background: #fff;
-  border-top: 1px solid #e8e8e8;
-  text-align: center;
-  z-index: 100;
-}
-
-/* 弹窗样式 */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  width: 800px;
-  max-height: 90vh;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  padding: 15px 20px;
-  border-bottom: 1px solid #e8e8e8;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.close {
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
-}
-
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  max-height: calc(90vh - 120px);
-}
-
-.modal-footer {
-  padding: 15px 20px;
-  border-top: 1px solid #e8e8e8;
-  text-align: right;
-}
-
-.rule-config {
-  margin-top: 20px;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-}
-
-.rule-config-header {
-  padding: 10px 15px;
-  background: #fafafa;
-  border-bottom: 1px solid #e8e8e8;
-  font-weight: 600;
-}
-
-.rule-config-body {
-  padding: 15px;
-}
-
-.rule-config-actions {
-  margin-top: 10px;
-}
-
-.text-btn {
-  color: #1890ff;
-  cursor: pointer;
-  margin-right: 20px;
-}
-
-.condition-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-}
-
-.condition-row select,
-.condition-row input {
-  width: 120px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-right: 10px;
-  font-size: 13px;
-}
-
-.condition-row input {
-  width: 100px;
-}
-
-.remove-btn {
-  color: #999;
-  cursor: pointer;
-  margin-left: 10px;
-}
-
-.condition-logic {
-  margin-bottom: 10px;
-  padding-left: 20px;
-}
-
-.logic-btn {
-  display: inline-block;
-  padding: 4px 12px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
+/* 规则配置 */
+.rule-config { margin-top: 20px; border: 1px solid #e8e8e8; border-radius: 4px; }
+.rule-config-header { padding: 10px 15px; background: #fafafa; border-bottom: 1px solid #e8e8e8; font-weight: 600; }
+.rule-config-body { padding: 15px; }
+.rule-config-actions { margin-top: 10px; }
+.text-btn { color: #409eff; cursor: pointer; margin-right: 20px; }
+.text-btn:hover { text-decoration: underline; }
+.condition-row { display: flex; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+.condition-row select, .condition-row input { height: 32px; padding: 0 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; min-width: 100px; }
+.condition-row input { width: 80px; min-width: auto; }
+.remove-btn { color: #999; cursor: pointer; margin-left: 10px; }
+.remove-btn:hover { color: #f56c6c; }
+.condition-logic { margin-bottom: 10px; padding-left: 20px; }
+.logic-btn { display: inline-block; padding: 4px 12px; background: #f0f0f0; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.logic-btn:hover { background: #e0e0e0; }
 </style>
