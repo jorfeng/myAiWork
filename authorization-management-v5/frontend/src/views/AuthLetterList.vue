@@ -172,7 +172,30 @@
 </template>
 
 <script>
-import request from '@/utils/request';
+import axios from 'axios';
+
+// 内联request配置
+const BASE_URL = '/api';
+const axiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+axiosInstance.interceptors.response.use(
+  response => response.data,
+  error => {
+    console.error('请求错误:', error);
+    return Promise.reject(error);
+  }
+);
+const request = {
+  get: (url, params) => axiosInstance.get(url, { params }),
+  post: (url, data) => axiosInstance.post(url, data),
+  put: (url, data) => axiosInstance.put(url, data),
+  delete: (url, params) => axiosInstance.delete(url, { params })
+};
 
 export default {
   name: 'AuthLetterList',
