@@ -366,22 +366,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 树形组件模板 -->
-    <script type="text/x-template" id="tree-node-template-detail">
-      <div class="tree-node">
-        <div class="tree-node-item" v-for="node in nodes" :key="node.id">
-          <div class="tree-node-content">
-            <input type="checkbox" :checked="isSelected(node.value)" @change="toggleSelect(node)" />
-            <span class="tree-node-label" @click="toggleExpand(node)">{{ node.label }}</span>
-            <span v-if="node.children && node.children.length" class="expand-icon">{{ expanded[node.id] ? '▼' : '▶' }}</span>
-          </div>
-          <div class="tree-node-children" v-if="node.children && node.children.length && expanded[node.id]">
-            <tree-node :nodes="node.children" :selected="selected" @select="$emit('select', $event)"></tree-node>
-          </div>
-        </div>
-      </div>
-    </script>
   </div>
 </template>
 
@@ -944,7 +928,6 @@ export default {
   },
   components: {
     'tree-node': {
-      template: '#tree-node-template-detail',
       props: ['nodes', 'selected'],
       data() {
         return {
@@ -968,6 +951,44 @@ export default {
         toggleExpand(node) {
           this.$set(this.expanded, node.id, !this.expanded[node.id]);
         }
+      },
+      render(h) {
+        const self = this;
+        if (!this.nodes || this.nodes.length === 0) {
+          return h('div', { class: 'tree-node' });
+        }
+        const children = this.nodes.map(function(node) {
+          const nodeChildren = [];
+          const contentChildren = [
+            h('input', {
+              attrs: { type: 'checkbox' },
+              domProps: { checked: self.isSelected(node.value) },
+              on: { change: function() { self.toggleSelect(node); } }
+            }),
+            h('span', {
+              class: 'tree-node-label',
+              on: { click: function() { self.toggleExpand(node); } }
+            }, node.label)
+          ];
+          if (node.children && node.children.length) {
+            contentChildren.push(
+              h('span', { class: 'expand-icon' }, self.expanded[node.id] ? '▼' : '▶')
+            );
+          }
+          nodeChildren.push(
+            h('div', { class: 'tree-node-content' }, contentChildren)
+          );
+          if (node.children && node.children.length && self.expanded[node.id]) {
+            nodeChildren.push(
+              h('tree-node', {
+                props: { nodes: node.children, selected: self.selected },
+                on: { select: function(val) { self.$emit('select', val); } }
+              })
+            );
+          }
+          return h('div', { class: 'tree-node-item', key: node.id }, nodeChildren);
+        });
+        return h('div', { class: 'tree-node' }, children);
       }
     }
   }
